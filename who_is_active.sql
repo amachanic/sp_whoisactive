@@ -12,7 +12,7 @@ GO
 
 /*********************************************************************************************
 Who Is Active? v11.33 (2019-07-28)
-2007-2019, Adam Machanic
+(C) 2007-2019, Adam Machanic
 
 Feedback: mailto:adam@dataeducation.com
 Updates: http://whoisactive.com
