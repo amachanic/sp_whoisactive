@@ -11,8 +11,8 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v11.33 (2019-07-28)
-(C) 2007-2019, Adam Machanic
+Who Is Active? v11.34 (2020-05-29)
+(C) 2007-2020, Adam Machanic
 
 Feedback: mailto:adam@dataeducation.com
 Updates: http://whoisactive.com
