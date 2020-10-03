@@ -1100,8 +1100,8 @@ BEGIN;
 		SELECT
 			x.column_name +
 				CASE
-					WHEN tokens.next_chunk LIKE '%asc%' THEN ' ASC'
-					WHEN tokens.next_chunk LIKE '%desc%' THEN ' DESC'
+					WHEN LOWER(tokens.next_chunk) LIKE '%asc%' THEN ' ASC'
+					WHEN LOWER(tokens.next_chunk) LIKE '%desc%' THEN ' DESC'
 					ELSE ''
 				END AS column_name,
 			ROW_NUMBER() OVER
