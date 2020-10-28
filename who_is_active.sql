@@ -119,7 +119,12 @@ ALTER PROC dbo.sp_WhoIsActive
 		--
 		--Note that column names in the list must be bracket-delimited. Commas and/or white
 		--space are not required. 
+		--
+		--You can use numeric_sort to try order column using its numeric value. 
+		--But this can lead some performance problems with large results due to conversions made to implement it.
+		--If some os column values cannot be converted to BIGINT, then NULL is used in place of original value.
 	@sort_order VARCHAR(500) = '[start_time] ASC',
+	@numeric_sort bit = 0,
 
 	--Formats some of the output columns in a more "human readable" form
 	--0 disables outfput format
@@ -1098,8 +1103,14 @@ BEGIN;
 	ordered_columns AS
 	(
 		SELECT
-			x.column_name +
-				CASE
+		
+			-- here will check if users ask to try sort using numeric sort.
+			-- In doc we warn users that using this can cause some performance degration due to conversion involed in sort.
+			-- We convert data to bigint... If data cannot be converted, then we just use null.
+			CASE
+				WHEN @numeric_sort = 0 THEN x.column_name
+				ELSE 'CASE WHEN ISNUMERIC(REPLACE('+x.column_name+','','','''')) = 1 THEN CONVERT(BIGINT,REPLACE('+x.column_name+','','','''')) ELSE CONVERT(BIGINT,NULL) END'
+			END + CASE
 					WHEN LOWER(tokens.next_chunk) LIKE '%asc%' THEN ' ASC'
 					WHEN LOWER(tokens.next_chunk) LIKE '%desc%' THEN ' DESC'
 					ELSE ''
@@ -4812,7 +4823,7 @@ BEGIN;
 			GOTO REDO;
 		END;
 	END;
-
+	
 	SET @sql = 
 		--Outer column list
 		CONVERT
@@ -5057,7 +5068,15 @@ BEGIN;
 												'ELSE NULL ' +
 											'END ' +
 								'ELSE ' +
-									'NULL ' +
+										-- If there are no previous snapshot to calculate delta, 
+										-- Use spent up here as delta CPU
+										-- If no previous snapshot, probably request appears after waiting the delta.
+										-- then all CPU time spent by request up here is less than delta interval but can be significant when analyzing queries consuing CPU in last second.
+										CASE @format_output
+											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, CPU))) OVER() - LEN(CONVERT(VARCHAR, CPU))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU), 1), 19)) '
+											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU), 1), 19)) '
+											ELSE 'CPU'
+										END +
 							'END AS CPU_delta, ' +
 							--context_switches_delta
 							'CASE ' +
@@ -5214,17 +5233,19 @@ BEGIN;
 							ELSE ''
 						END +
 						'COUNT(*) OVER (PARTITION BY session_id, request_id) AS num_events ' +
-					'FROM #sessions AS s1 ' +
+					'FROM #sessions AS s1 ) AS s ' +
+				'WHERE ' +
+					's.recursion = 1 ' +
+			') x ' +
+					-- Now, we do the sort order outside the main derived table in order 
+					-- to be able use calculated column names in more complex sort expressions
 					CASE 
 						WHEN @sort_order = '' THEN ''
 						ELSE
 							'ORDER BY ' +
-								@sort_order
-					END +
-				') AS s ' +
-				'WHERE ' +
-					's.recursion = 1 ' +
-			') x ' +
+								@sort_order+' '
+					END 
+				+
 			'OPTION (KEEPFIXED PLAN); ' +
 			'' +
 			CASE @return_schema
