@@ -1824,7 +1824,7 @@ BEGIN;
 							WHEN
 								spy.wait_type LIKE N''PAGE%LATCH_%''
 								OR spy.wait_type = N''CXPACKET''
-                                OR spy.wait_type = N''CXCONSUMER''
+								OR spy.wait_type = N''CXCONSUMER''
 								OR spy.wait_type LIKE N''LATCH[_]%''
 								OR spy.wait_type = N''OLEDB'' THEN
 									spy.wait_resource
@@ -2742,14 +2742,14 @@ BEGIN;
 												N'')''
 											WHEN y.wait_type = N''CXPACKET'' THEN
 												N'':'' + SUBSTRING(y.resource_description, 
-	                                                               CHARINDEX(N''nodeId'', y.resource_description) + 7, 
-			                                                       CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
-			                                                       - 7 - CHARINDEX(N''nodeId'', y.resource_description))
+																   CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+																   CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
+																   - 7 - CHARINDEX(N''nodeId'', y.resource_description))
 											WHEN y.wait_type = N''CXCONSUMER'' THEN
 												N'':'' + SUBSTRING(y.resource_description, 
-	                                                               CHARINDEX(N''nodeId'', y.resource_description) + 7, 
-			                                                       CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
-			                                                       - 7 - CHARINDEX(N''nodeId'', y.resource_description))
+																   CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+																   CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
+																   - 7 - CHARINDEX(N''nodeId'', y.resource_description))
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
 											WHEN
@@ -3183,16 +3183,16 @@ BEGIN;
 																				N''*''
 																		END +
 																	N'')''
-											                    WHEN wt.wait_type = N''CXPACKET'' THEN
-											                    	N'':'' + SUBSTRING(wt.resource_description, 
-	                                                                                   CHARINDEX(N''nodeId'', wt.resource_description) + 7, 
-			                                                                           CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7)
-			                                                                           - 7 - CHARINDEX(N''nodeId'', wt.resource_description))
-											                    WHEN wt.wait_type = N''CXCONSUMER'' THEN
-											                    	N'':'' + SUBSTRING(wt.resource_description, 
-	                                                                                   CHARINDEX(N''nodeId'', wt.resource_description) + 7, 
-			                                                                           CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7)
-			                                                                           - 7 - CHARINDEX(N''nodeId'', wt.resource_description))
+																WHEN wt.wait_type = N''CXPACKET'' THEN
+																	N'':'' + SUBSTRING(wt.resource_description, 
+																					   CHARINDEX(N''nodeId'', wt.resource_description) + 7, 
+																					   CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7)
+																					   - 7 - CHARINDEX(N''nodeId'', wt.resource_description))
+																WHEN wt.wait_type = N''CXCONSUMER'' THEN
+																	N'':'' + SUBSTRING(wt.resource_description, 
+																					   CHARINDEX(N''nodeId'', wt.resource_description) + 7, 
+																					   CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7)
+																					   - 7 - CHARINDEX(N''nodeId'', wt.resource_description))
 																WHEN wt.wait_type LIKE N''LATCH[_]%'' THEN
 																	N'' ['' + LEFT(wt.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', wt.resource_description), 0), LEN(wt.resource_description) + 1) - 1) + N'']''
 																ELSE 
