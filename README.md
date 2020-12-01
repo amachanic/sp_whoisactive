@@ -10,7 +10,9 @@
 
 The license is now [GPLv3](/LICENSE).
 
-Documentation is still available at http://whoisactive.com/docs
+[GitHub Documentation](Docs/README.md)
+
+Documentation is also available at http://whoisactive.com/docs
 
 If you have enhancements, please consider a PR instead of a fork. I would like to continue to maintain this project for the community.
 
