@@ -10,7 +10,7 @@
 
 The license is now [GPLv3](/LICENSE).
 
-[GitHub Documentation](Docs/README.md)
+[GitHub Documentation](/Docs/ReadMe.md)
 
 Documentation is also available at http://whoisactive.com/docs
 
