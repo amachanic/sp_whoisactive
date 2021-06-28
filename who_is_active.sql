@@ -2072,7 +2072,7 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
-								LEFT JOIN 
+								INNER JOIN 
 									sys.dm_exec_query_memory_grants mg 
 								ON 
 									sp2.spid = mg.session_id
