@@ -204,6 +204,11 @@ Non-Formatted:	[used_memory] [bigint] NOT NULL
 	For an active request, total memory consumption for the current query
 	For a sleeping session, total current memory consumption
 
+Formatted:		[requested_memory] [varchar](30) NOT NULL
+Non-Formatted:	[requested_memory] [bigint] NOT NULL
+	For an active request, total memory requested for the current query
+	For a sleeping session, of course none
+
 Formatted:		[physical_io_delta] [varchar](30) NULL
 Non-Formatted:	[physical_io_delta] [bigint] NULL
 	(Requires @delta_interval option)
@@ -255,6 +260,11 @@ Non-Formatted:	[context_switches_delta] [bigint] NULL
 Formatted:		[used_memory_delta] [varchar](30) NULL
 Non-Formatted:	[used_memory_delta] [bigint] NULL
 	Difference between the memory usage reported on the first and second collections
+	If the request started after the first collection, the value will be NULL
+
+Formatted:		[requested_memory_delta] [varchar](30) NULL
+Non-Formatted:	[requested_memory_delta] [bigint] NULL
+	Difference between the requested memory usage reported on the first and second collections
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[tasks] [varchar](30) NULL
@@ -903,109 +913,111 @@ BEGIN;
 			UNION ALL
 			SELECT '[used_memory]', 13
 			UNION ALL
-			SELECT '[physical_io_delta]', 14
+			SELECT '[requested_memory]', 14
+			UNION ALL
+			SELECT '[physical_io_delta]', 15
 			WHERE
 				@delta_interval > 0	
 				AND @get_task_info = 2
 			UNION ALL
-			SELECT '[reads_delta]', 15
+			SELECT '[reads_delta]', 16
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[physical_reads_delta]', 16
+			SELECT '[physical_reads_delta]', 17
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[writes_delta]', 17
+			SELECT '[writes_delta]', 18
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[tempdb_allocations_delta]', 18
+			SELECT '[tempdb_allocations_delta]', 19
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[tempdb_current_delta]', 19
+			SELECT '[tempdb_current_delta]', 20
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[CPU_delta]', 20
+			SELECT '[CPU_delta]', 21
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[context_switches_delta]', 21
+			SELECT '[context_switches_delta]', 22
 			WHERE
 				@delta_interval > 0
 				AND @get_task_info = 2
 			UNION ALL
-			SELECT '[used_memory_delta]', 22
+			SELECT '[used_memory_delta]', 23
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[tasks]', 23
+			SELECT '[tasks]', 24
 			WHERE
 				@get_task_info = 2
 			UNION ALL
-			SELECT '[status]', 24
+			SELECT '[status]', 25
 			UNION ALL
-			SELECT '[wait_info]', 25
+			SELECT '[wait_info]', 26
 			WHERE
 				@get_task_info > 0
 				OR @find_block_leaders = 1
 			UNION ALL
-			SELECT '[locks]', 26
+			SELECT '[locks]', 27
 			WHERE
 				@get_locks = 1
 			UNION ALL
-			SELECT '[tran_start_time]', 27
+			SELECT '[tran_start_time]', 28
 			WHERE
 				@get_transaction_info = 1
 			UNION ALL
-			SELECT '[tran_log_writes]', 28
+			SELECT '[tran_log_writes]', 29
 			WHERE
 				@get_transaction_info = 1
 			UNION ALL
-			SELECT '[open_tran_count]', 29
+			SELECT '[open_tran_count]', 30
 			UNION ALL
-			SELECT '[sql_command]', 30
+			SELECT '[sql_command]', 31
 			WHERE
 				@get_outer_command = 1
 			UNION ALL
-			SELECT '[sql_text]', 31
+			SELECT '[sql_text]', 32
 			UNION ALL
-			SELECT '[query_plan]', 32
+			SELECT '[query_plan]', 33
 			WHERE
 				@get_plans >= 1
 			UNION ALL
-			SELECT '[blocking_session_id]', 33
+			SELECT '[blocking_session_id]', 34
 			WHERE
 				@get_task_info > 0
 				OR @find_block_leaders = 1
 			UNION ALL
-			SELECT '[blocked_session_count]', 34
+			SELECT '[blocked_session_count]', 35
 			WHERE
 				@find_block_leaders = 1
 			UNION ALL
-			SELECT '[percent_complete]', 35
+			SELECT '[percent_complete]', 36
 			UNION ALL
-			SELECT '[host_name]', 36
+			SELECT '[host_name]', 37
 			UNION ALL
-			SELECT '[login_name]', 37
+			SELECT '[login_name]', 38
 			UNION ALL
-			SELECT '[database_name]', 38
+			SELECT '[database_name]', 39
 			UNION ALL
-			SELECT '[program_name]', 39
+			SELECT '[program_name]', 40
 			UNION ALL
-			SELECT '[additional_info]', 40
+			SELECT '[additional_info]', 41
 			WHERE
 				@get_additional_info = 1
 			UNION ALL
-			SELECT '[start_time]', 41
+			SELECT '[start_time]', 42
 			UNION ALL
-			SELECT '[login_time]', 42
+			SELECT '[login_time]', 43
 			UNION ALL
-			SELECT '[request_id]', 43
+			SELECT '[request_id]', 44
 			UNION ALL
-			SELECT '[collection_time]', 44
+			SELECT '[collection_time]', 45
 		) AS x ON 
 			x.column_name LIKE token ESCAPE '|'
 	)
@@ -1176,6 +1188,10 @@ BEGIN;
 			SELECT '[login_time]'
 			UNION ALL
 			SELECT '[program_name]'
+			UNION ALL
+			SELECT '[requested_memory]'
+			UNION ALL
+			SELECT '[requested_memory_delta]'
 		) AS x ON 
 			x.column_name LIKE token ESCAPE '|'
 	)
@@ -1221,6 +1237,7 @@ BEGIN;
 		thread_CPU_snapshot BIGINT NULL,
 		context_switches BIGINT NULL,
 		used_memory BIGINT NOT NULL, 
+		requested_memory BIGINT NOT NULL, 
 		tasks SMALLINT NULL,
 		status VARCHAR(30) NOT NULL,
 		wait_info NVARCHAR(4000) NULL,
@@ -1735,6 +1752,7 @@ BEGIN;
 				program_name NVARCHAR(128),
 				database_id SMALLINT,
 				memory_usage INT,
+				requested_memory_usage INT,
 				open_tran_count SMALLINT, 
 				' +
 				CASE
@@ -1778,6 +1796,7 @@ BEGIN;
 				program_name,
 				database_id,
 				memory_usage,
+				requested_memory_usage, 
 				open_tran_count, 
 				' +
 				CASE
@@ -1811,6 +1830,7 @@ BEGIN;
 				spy.program_name,
 				spy.database_id,
 				spy.memory_usage,
+				spy.requested_memory_usage,
 				spy.open_tran_count,
 				' +
 				CASE
@@ -1895,6 +1915,7 @@ BEGIN;
 						sp0.program_name,
 						sp0.database_id,
 						sp0.memory_usage,
+						sp0.requested_memory_usage, --here 
 						sp0.open_tran_count, 
 						' +
 						CASE
@@ -1945,6 +1966,7 @@ BEGIN;
 							sp1.program_name,
 							sp1.database_id,
 							MAX(sp1.memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS memory_usage,
+							MAX(sp1.requested_memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS requested_memory_usage,
 							MAX(sp1.open_tran_count)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS open_tran_count,
 							sp1.wait_type,
 							sp1.wait_resource,
@@ -1987,7 +2009,8 @@ BEGIN;
 									END COLLATE SQL_Latin1_General_CP1_CI_AS
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,
-								MAX(sp2.memusage) AS memory_usage,
+								MAX(mg.granted_memory_kb) AS memory_usage,
+								MAX(mg.requested_memory_kb) AS requested_memory_usage,----here sp_what code
 								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
 								RTRIM(sp2.waitresource) AS wait_resource,
@@ -2049,6 +2072,10 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
+								LEFT JOIN 
+									sys.dm_exec_query_memory_grants mg 
+								ON 
+									sp2.spid = mg.session_id
 							' +
 							CASE 
 								WHEN 
@@ -2357,6 +2384,17 @@ BEGIN;
 						'0 '
 				END + 
 					'AS used_memory, 
+					' +
+				CASE
+					WHEN 
+						@output_column_list LIKE '%|[requested_memory|]%' ESCAPE '|'
+						OR @output_column_list LIKE '%|[requested_memory_delta|]%' ESCAPE '|'
+							THEN 
+								'x.requested_memory '
+					ELSE 
+						'0 '
+				END + 
+					'AS requested_memory, 
 					' +
 				CASE
 					WHEN 
@@ -2783,7 +2821,11 @@ BEGIN;
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,
+						--r.memory_usage + 
+						COALESCE(mg.granted_memory_kb, 0) AS used_memory,
+						--r.requested_memory + 
+						COALESCE(mg.requested_memory_kb, 0) AS requested_memory,
+
 						LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
@@ -2897,7 +2939,14 @@ BEGIN;
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
 						)
-				) AS y
+											LEFT JOIN 
+						sys.dm_exec_query_memory_grants mg 
+					ON 
+						s.session_id = mg.session_id
+				) 
+				
+
+				AS y--------------------here join add the 
 				' + 
 				CASE 
 					WHEN @get_task_info = 2 THEN
@@ -3443,6 +3492,7 @@ BEGIN;
 			thread_CPU_snapshot,
 			context_switches,
 			used_memory,
+			requested_memory,
 			tasks,
 			status,
 			wait_info,
@@ -4946,6 +4996,12 @@ BEGIN;
 						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory), 1), 19)) AS '
 						ELSE ''
 					END + 'used_memory, ' +
+					--requested_memory
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, requested_memory))) OVER() - LEN(CONVERT(VARCHAR, requested_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory), 1), 19)) AS '
+						ELSE ''
+					END + 'requested_memory, ' +
 					CASE
 						WHEN @output_column_list LIKE '%|_delta|]%' ESCAPE '|' THEN
 							--physical_io_delta			
@@ -5086,7 +5142,22 @@ BEGIN;
 											ELSE 'used_memory_delta '
 										END + 
 								'ELSE NULL ' +
-							'END AS used_memory_delta, '
+							'END AS used_memory_delta, ' +
+				
+							--requested_memory_delta
+							+ 'CASE ' +
+								'WHEN ' +
+									'first_request_start_time = last_request_start_time ' + 
+									'AND num_events = 2 ' +
+									'AND requested_memory_delta >= 0 ' +
+										'THEN ' +
+										CASE @format_output
+											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, requested_memory_delta))) OVER() - LEN(CONVERT(VARCHAR, requested_memory_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory_delta), 1), 19)) '
+											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory_delta), 1), 19)) '
+											ELSE 'requested_memory_delta '
+										END + 
+								'ELSE NULL ' +
+							'END AS requested_memory_delta, '
 						ELSE ''
 					END +
 					--tasks
@@ -5210,6 +5281,8 @@ BEGIN;
 									'MIN(context_switches * recursion) OVER (PARTITION BY session_id, request_id) AS context_switches_delta, ' +
 								'MAX(used_memory * recursion) OVER (PARTITION BY session_id, request_id) + ' +
 									'MIN(used_memory * recursion) OVER (PARTITION BY session_id, request_id) AS used_memory_delta, ' +
+								'MAX(requested_memory * recursion) OVER (PARTITION BY session_id, request_id) + ' +
+									'MIN(requested_memory * recursion) OVER (PARTITION BY session_id, request_id) AS requested_memory_delta, ' +
 								'MIN(last_request_start_time) OVER (PARTITION BY session_id, request_id) AS first_request_start_time, '
 							ELSE ''
 						END +
@@ -5265,7 +5338,7 @@ BEGIN;
 		);
 
 	SET @sql_n = CONVERT(NVARCHAR(MAX), @sql);
-
+	
 	EXEC sp_executesql
 		@sql_n,
 		N'@schema VARCHAR(MAX) OUTPUT',
