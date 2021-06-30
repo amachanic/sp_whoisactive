@@ -2065,7 +2065,7 @@ BEGIN;
 								WHERE
 									@blocker = 0
 							) AS blk
-							LEFT JOIN sys.sysprocesses AS sp2 ON
+							INNER JOIN sys.sysprocesses AS sp2 ON
 								sp2.spid = blk.session_id
 								OR
 								(
