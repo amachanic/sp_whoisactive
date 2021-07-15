@@ -11,7 +11,7 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v11.35 (2020-10-04)
+Who Is Active? v11.36 (2020-10-04)
 (C) 2007-2020, Adam Machanic
 
 Feedback: mailto:adam@dataeducation.com
@@ -1987,7 +1987,7 @@ BEGIN;
 									END COLLATE SQL_Latin1_General_CP1_CI_AS
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,
-								MAX(sp2.memusage) AS memory_usage,
+								MAX(mg.used_memory_kb) AS memory_usage,
 								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
 								RTRIM(sp2.waitresource) AS wait_resource,
@@ -2049,6 +2049,10 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
+							LEFT JOIN 
+									sys.dm_exec_query_memory_grants mg 
+								ON 
+									sp2.spid = mg.session_id
 							' +
 							CASE 
 								WHEN 
@@ -2596,7 +2600,13 @@ BEGIN;
 										x.lock_timeout,
 										x.deadlock_priority,
 										x.row_count,
-										x.command_type, 
+										x.command_type,
+										x.requested_memory,
+										x.granted_memory,
+										x.required_memory,
+										x.max_used_memory,
+										x.DOP,
+										x.QueryCost, 
 										' +
 										CASE
 											WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
@@ -2783,7 +2793,13 @@ BEGIN;
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,
+						sp.memory_usage AS used_memory,
+						COALESCE(mg.granted_memory_kb, 0) AS granted_memory,
+						COALESCE(mg.required_memory_kb, 0) AS required_memory,
+						COALESCE(mg.requested_memory_kb, 0)  AS requested_memory,
+						COALESCE(mg.max_used_memory_kb, 0) AS max_used_memory,
+						COALESCE(mg.dop, 0) AS DOP,
+						COALESCE(mg.query_cost, 0) AS QueryCost,
 						LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
@@ -2897,6 +2913,10 @@ BEGIN;
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
 						)
+					LEFT JOIN 
+						sys.dm_exec_query_memory_grants mg 
+					ON 
+						s.session_id = mg.session_id
 				) AS y
 				' + 
 				CASE 
