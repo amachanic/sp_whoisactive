@@ -2793,7 +2793,7 @@ BEGIN;
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						sp.memory_usage AS used_memory,
+						COALESCE(sp.memory_usage, 0) AS used_memory,
 						COALESCE(mg.granted_memory_kb, 0) AS granted_memory,
 						COALESCE(mg.required_memory_kb, 0) AS required_memory,
 						COALESCE(mg.requested_memory_kb, 0)  AS requested_memory,
