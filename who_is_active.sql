@@ -2916,7 +2916,7 @@ BEGIN;
 					LEFT JOIN 
 						sys.dm_exec_query_memory_grants mg 
 					ON 
-						mg.session_id = s.session_id 
+						mg.session_id = sp.session_id 
 				) AS y
 				' + 
 				CASE 
