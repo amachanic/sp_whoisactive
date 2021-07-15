@@ -2052,7 +2052,7 @@ BEGIN;
 							LEFT JOIN 
 									sys.dm_exec_query_memory_grants mg 
 								ON 
-									sp2.spid = mg.session_id
+									mg.session_id = sp2.spid
 							' +
 							CASE 
 								WHEN 
@@ -2916,7 +2916,7 @@ BEGIN;
 					LEFT JOIN 
 						sys.dm_exec_query_memory_grants mg 
 					ON 
-						s.session_id = mg.session_id
+						mg.session_id = s.session_id 
 				) AS y
 				' + 
 				CASE 
