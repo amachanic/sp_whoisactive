@@ -2606,7 +2606,7 @@ BEGIN;
 										x.required_memory,
 										x.max_used_memory,
 										x.DOP,
-										x.QueryCost, 
+										CAST(x.QueryCost as NUMERIC(15,2)) as QueryCost, 
 										' +
 										CASE
 											WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
