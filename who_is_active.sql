@@ -1834,7 +1834,7 @@ BEGIN;
 				required_memory_usage,
 				used_memory_usage,
 				max_used_memory_usage,
-				DOP ,
+				DOP,
 				QueryCost ,
 				open_tran_count, 
 				' +
@@ -2940,13 +2940,13 @@ BEGIN;
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						COALESCE(mg.requested_memory_kb, 0)  AS requested_memory,
-						COALESCE(mg.granted_memory_kb, 0) AS granted_memory,
+						COALESCE(sp.requested_memory_usage, 0)  AS requested_memory,
+						COALESCE(sp.granted_memory_usage, 0) AS granted_memory,
 						COALESCE(sp.required_memory_usage, 0) AS required_memory,
 						COALESCE(sp.used_memory_usage, 0) AS used_memory,
-						COALESCE(mg.max_used_memory_kb, 0) AS max_used_memory,
-						COALESCE(mg.dop, 0) AS DOP,
-						COALESCE(mg.query_cost, 0) AS QueryCost,
+						COALESCE(sp.max_used_memory_usage, 0) AS max_used_memory,
+						COALESCE(sp.DOP, 0) AS DOP,
+						CAST(COALESCE(sp.QueryCost, 0) AS NUMERIC(13,2)) AS QueryCost,
 						LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
@@ -5151,8 +5151,8 @@ BEGIN;
 					END + 'DOP, ' +
 					--QueryCost
 					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, QueryCost))) OVER() - LEN(CONVERT(VARCHAR, QueryCost))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, QueryCost), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, QueryCost), 1), 19)) AS '
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, QueryCost))) OVER() - LEN(CONVERT(VARCHAR, QueryCost))) + LEFT(CONVERT(CHAR(22), CONVERT(NUMERIC(13,2), QueryCost), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(NUMERIC(13,2), QueryCost), 1), 19)) AS '
 						ELSE ''
 					END + 'QueryCost, ' +
 					CASE
