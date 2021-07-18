@@ -141,6 +141,9 @@ ALTER PROC dbo.sp_WhoIsActive
 	@return_schema BIT = 0,
 	@schema VARCHAR(MAX) = NULL OUTPUT,
 
+	---Set memory default counter used_memory=1, requested_memory=2, granted_memory=3, required_memory=4, max_used_memory=5
+	@memory_default int =1 ,--used_memory as the default
+	--Show advanced memeory counters used_memory, requested_memory, granted_memory, required_memory, max_used_memory, DOP, QueryCost
 	@advanced_memory_counters int =0,
 
 	--Help! What do I do?
@@ -901,25 +904,32 @@ BEGIN;
 			UNION ALL
 			SELECT '[context_switches]', 12
 			WHERE
-				@get_task_info = 2	
+				@get_task_info = 2	--used_memory=1, requested_memory=2, granted_memory=3, required_memory=4, max_used_memory=5
 			UNION ALL		
 			SELECT '[requested_memory]', 13
 			WHERE
 				@advanced_memory_counters = 1
+				OR @memory_default=2
 			UNION ALL
 			SELECT '[granted_memory]', 14
 			WHERE
 			@advanced_memory_counters = 1
+			OR @memory_default=3
 			UNION ALL
 			SELECT '[required_memory]', 15
 			WHERE
 			@advanced_memory_counters = 1
+			OR @memory_default=4
 			UNION
 			SELECT '[used_memory]', 16
+			WHERE
+			@advanced_memory_counters = 1
+				OR @memory_default=1
 			UNION ALL
 			SELECT '[max_used_memory]', 17
 			WHERE
 			@advanced_memory_counters = 1
+			OR @memory_default=5
 			UNION ALL
 			SELECT '[DOP]', 18
 			WHERE
