@@ -904,7 +904,7 @@ BEGIN;
 			UNION ALL
 			SELECT '[context_switches]', 12
 			WHERE
-				@get_task_info = 2	--used_memory=1, requested_memory=2, granted_memory=3, required_memory=4, max_used_memory=5
+				@get_task_info = 2	
 			UNION ALL		
 			SELECT '[requested_memory]', 13
 			WHERE
