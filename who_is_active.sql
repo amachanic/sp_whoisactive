@@ -2946,9 +2946,9 @@ BEGIN;
 					SELECT TOP(@i)
 						sp.session_id,
 						sp.request_id,
-						COALESCE(r.logical_reads, s.logical_reads) AS reads,
-						COALESCE(r.reads, s.reads) AS physical_reads,
-						COALESCE(r.writes, s.writes) AS writes,
+						COALESCE(r.logical_reads, s.logical_reads,0) AS reads,
+						COALESCE(r.reads, s.reads,0) AS physical_reads,
+						COALESCE(r.writes, s.writes,0) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
 						COALESCE(sp.requested_memory_usage, 0)  AS requested_memory,
 						COALESCE(sp.granted_memory_usage, 0) AS granted_memory,
