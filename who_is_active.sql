@@ -210,7 +210,7 @@ Non-Formatted:	[max_used_memory] [bigint] NOT NULL
 Non-Formatted:	[DOP] [int] NOT NULL
 	For an active request, DOP for the current query
 	Formatted:		[DOP] [varchar](2) NOT NULL
-Non-Formatted:	[QueryCost] [NUMERIC(13,2)] NOT NULL
+Non-Formatted:	[QueryCost] [float] NOT NULL
 	For an active request, QueryCost for the current query
 	Formatted:		[QueryCost] [varchar](30) NOT NULL
 Non-Formatted:	[ideal_memory] [bigint] NOT NULL
@@ -1260,7 +1260,7 @@ BEGIN;
 		max_used_memory BIGINT NOT NULL,
 		ideal_memory BIGINT NOT NULL,
 		DOP BIGINT NOT NULL, 
-		QueryCost NUMERIC(13,2) NOT NULL,
+		QueryCost FLOAT NOT NULL,
 		tasks SMALLINT NULL,
 		status VARCHAR(30) NOT NULL,
 		wait_info NVARCHAR(4000) NULL,
@@ -1780,7 +1780,7 @@ BEGIN;
 				max_used_memory_usage BIGINT,
 				ideal_memory_usage BIGINT,
 				DOP INT,
-				QueryCost NUMERIC(13,2),
+				QueryCost FLOAT,
 				open_tran_count SMALLINT, 
 				' +
 				CASE
@@ -2945,7 +2945,7 @@ BEGIN;
 						COALESCE(sp.max_used_memory_usage, 0) AS max_used_memory,
 						COALESCE(sp.ideal_memory_usage, 0) AS ideal_memory,
 						COALESCE(sp.DOP, 0) AS DOP,
-						CAST(COALESCE(sp.QueryCost, 0) AS NUMERIC(13,2)) AS QueryCost,
+						CAST(COALESCE(sp.QueryCost, 0.0) AS FLOAT) AS QueryCost,
 						LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
@@ -5153,8 +5153,8 @@ BEGIN;
 					END + 'DOP, ' +
 					--QueryCost
 					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, QueryCost))) OVER() - LEN(CONVERT(VARCHAR, QueryCost))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, QueryCost), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, QueryCost), 1), 19)) AS '
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, QueryCost))) OVER() - LEN(CONVERT(VARCHAR, QueryCost))) + LEFT(CONVERT(CHAR(22), CONVERT(DECIMAL(13,2), QueryCost), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(DECIMAL(13,2), QueryCost), 1), 19)) AS '
 						ELSE ''
 					END + 'QueryCost, ' +
 					CASE
