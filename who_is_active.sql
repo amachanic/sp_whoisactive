@@ -11,13 +11,11 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v11.35 (2020-10-04)
+Who Is Active? v11.36 (2020-10-04)
 (C) 2007-2020, Adam Machanic
-
 Feedback: mailto:adam@dataeducation.com
 Updates: http://whoisactive.com
 Blog: http://dataeducation.com
-
 License: 
 	https://github.com/amachanic/sp_whoisactive/blob/master/LICENSE
 *********************************************************************************************/
@@ -141,6 +139,11 @@ ALTER PROC dbo.sp_WhoIsActive
 	@return_schema BIT = 0,
 	@schema VARCHAR(MAX) = NULL OUTPUT,
 
+	---Set memory default counter used_memory=1, requested_memory=2, granted_memory=3, required_memory=4, max_used_memory=5, ideal_memory=6
+	@memory_default TINYINT =1 ,--used_memory as the default
+	--Show advanced memeory counters used_memory, requested_memory, granted_memory, required_memory, max_used_memory, DOP, QueryCost
+	@advanced_memory_counters BIT = 0,
+
 	--Help! What do I do?
 	@help BIT = 0
 --~
@@ -150,120 +153,117 @@ OUTPUT COLUMNS
 --------------
 Formatted/Non:	[session_id] [smallint] NOT NULL
 	Session ID (a.k.a. SPID)
-
 Formatted:		[dd hh:mm:ss.mss] [varchar](15) NULL
 Non-Formatted:	<not returned>
 	For an active request, time the query has been running
 	For a sleeping session, time since the last batch completed
-
 Formatted:		[dd hh:mm:ss.mss (avg)] [varchar](15) NULL
 Non-Formatted:	[avg_elapsed_time] [int] NULL
 	(Requires @get_avg_time option)
 	How much time has the active portion of the query taken in the past, on average?
-
 Formatted:		[physical_io] [varchar](30) NULL
 Non-Formatted:	[physical_io] [bigint] NULL
 	Shows the number of physical I/Os, for active requests
-
 Formatted:		[reads] [varchar](30) NULL
 Non-Formatted:	[reads] [bigint] NULL
 	For an active request, number of reads done for the current query
 	For a sleeping session, total number of reads done over the lifetime of the session
-
 Formatted:		[physical_reads] [varchar](30) NULL
 Non-Formatted:	[physical_reads] [bigint] NULL
 	For an active request, number of physical reads done for the current query
 	For a sleeping session, total number of physical reads done over the lifetime of the session
-
 Formatted:		[writes] [varchar](30) NULL
 Non-Formatted:	[writes] [bigint] NULL
 	For an active request, number of writes done for the current query
 	For a sleeping session, total number of writes done over the lifetime of the session
-
 Formatted:		[tempdb_allocations] [varchar](30) NULL
 Non-Formatted:	[tempdb_allocations] [bigint] NULL
 	For an active request, number of TempDB writes done for the current query
 	For a sleeping session, total number of TempDB writes done over the lifetime of the session
-
 Formatted:		[tempdb_current] [varchar](30) NULL
 Non-Formatted:	[tempdb_current] [bigint] NULL
 	For an active request, number of TempDB pages currently allocated for the query
 	For a sleeping session, number of TempDB pages currently allocated for the session
-
 Formatted:		[CPU] [varchar](30) NULL
 Non-Formatted:	[CPU] [int] NULL
 	For an active request, total CPU time consumed by the current query
 	For a sleeping session, total CPU time consumed over the lifetime of the session
-
 Formatted:		[context_switches] [varchar](30) NULL
 Non-Formatted:	[context_switches] [bigint] NULL
 	Shows the number of context switches, for active requests
-
-Formatted:		[used_memory] [varchar](30) NOT NULL
+Formatted:		[requested_memory] [varchar](30) NOT NULL
+Non-Formatted:	[requested_memory] [bigint] NOT NULL
+	For an active request, requested_memory for the current query
+	Formatted:	[requested_memory] [varchar](30) NOT NULL
+Non-Formatted:	[granted_memory] [bigint] NOT NULL
+	For an active request, granted memory for the current query
+	Formatted:	[granted_memory] [varchar](30) NOT NULL
+Non-Formatted:	[required_memory] [bigint] NOT NULL
+	For an active request, required memory for the current query
+	Formatted:	[required_memory] [varchar](30) NOT NULL
 Non-Formatted:	[used_memory] [bigint] NOT NULL
-	For an active request, total memory consumption for the current query
-	For a sleeping session, total current memory consumption
-
+	For an active request, used_memory to right now for the current query
+	Formatted:		[used_memory] [varchar](30) NOT NULL
+Non-Formatted:	[max_used_memory] [bigint] NOT NULL
+	For an active request, max_used_memory to right now for the current query
+	Formatted:		[max_used_memory] [varchar](30) NOT NULL
+Non-Formatted:	[DOP] [int] NOT NULL
+	For an active request, DOP for the current query
+	Formatted:		[DOP] [varchar](2) NOT NULL
+Non-Formatted:	[QueryCost] [float] NOT NULL
+	For an active request, QueryCost for the current query
+	Formatted:		[QueryCost] [varchar](30) NOT NULL
+Non-Formatted:	[ideal_memory] [bigint] NOT NULL
+	For an active request, ideal memory for the current query
 Formatted:		[physical_io_delta] [varchar](30) NULL
 Non-Formatted:	[physical_io_delta] [bigint] NULL
 	(Requires @delta_interval option)
 	Difference between the number of physical I/Os reported on the first and second collections. 
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[reads_delta] [varchar](30) NULL
 Non-Formatted:	[reads_delta] [bigint] NULL
 	(Requires @delta_interval option)
 	Difference between the number of reads reported on the first and second collections. 
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[physical_reads_delta] [varchar](30) NULL
 Non-Formatted:	[physical_reads_delta] [bigint] NULL
 	(Requires @delta_interval option)
 	Difference between the number of physical reads reported on the first and second collections. 
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[writes_delta] [varchar](30) NULL
 Non-Formatted:	[writes_delta] [bigint] NULL
 	(Requires @delta_interval option)
 	Difference between the number of writes reported on the first and second collections. 
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[tempdb_allocations_delta] [varchar](30) NULL
 Non-Formatted:	[tempdb_allocations_delta] [bigint] NULL
 	(Requires @delta_interval option)
 	Difference between the number of TempDB writes reported on the first and second collections. 
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[tempdb_current_delta] [varchar](30) NULL
 Non-Formatted:	[tempdb_current_delta] [bigint] NULL
 	(Requires @delta_interval option)
 	Difference between the number of allocated TempDB pages reported on the first and second 
 	collections. If the request started after the first collection, the value will be NULL
-
 Formatted:		[CPU_delta] [varchar](30) NULL
 Non-Formatted:	[CPU_delta] [int] NULL
 	(Requires @delta_interval option)
 	Difference between the CPU time reported on the first and second collections. 
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[context_switches_delta] [varchar](30) NULL
 Non-Formatted:	[context_switches_delta] [bigint] NULL
 	(Requires @delta_interval option)
 	Difference between the context switches count reported on the first and second collections
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[used_memory_delta] [varchar](30) NULL
 Non-Formatted:	[used_memory_delta] [bigint] NULL
 	Difference between the memory usage reported on the first and second collections
 	If the request started after the first collection, the value will be NULL
-
 Formatted:		[tasks] [varchar](30) NULL
 Non-Formatted:	[tasks] [smallint] NULL
 	Number of worker tasks currently allocated, for active requests
-
 Formatted/Non:	[status] [varchar](30) NOT NULL
 	Activity status for the session (running, sleeping, etc)
-
 Formatted/Non:	[wait_info] [nvarchar](4000) NULL
 	Aggregates wait information, in the following format:
 		(Ax: Bms/Cms/Dms)E
@@ -274,18 +274,15 @@ Formatted/Non:	[wait_info] [nvarchar](4000) NULL
 	If wait type E is a page latch wait and the page is of a "special" type (e.g. PFS, GAM, SGAM), 
 	the page type will be identified.
 	If wait type E is CXPACKET, the nodeId from the query plan will be identified
-
 Formatted/Non:	[locks] [xml] NULL
 	(Requires @get_locks option)
 	Aggregates lock information, in XML format.
 	The lock XML includes the lock mode, locked object, and aggregates the number of requests. 
 	Attempts are made to identify locked objects by name
-
 Formatted/Non:	[tran_start_time] [datetime] NULL
 	(Requires @get_transaction_info option)
 	Date and time that the first transaction opened by a session caused a transaction log 
 	write to occur.
-
 Formatted/Non:	[tran_log_writes] [nvarchar](4000) NULL
 	(Requires @get_transaction_info option)
 	Aggregates transaction log write information, in the following format:
@@ -293,17 +290,14 @@ Formatted/Non:	[tran_log_writes] [nvarchar](4000) NULL
 	A is a database that has been touched by an active transaction
 	B is the number of log writes that have been made in the database as a result of the transaction
 	C is the number of log kilobytes consumed by the log records
-
 Formatted:		[open_tran_count] [varchar](30) NULL
 Non-Formatted:	[open_tran_count] [smallint] NULL
 	Shows the number of open transactions the session has open
-
 Formatted:		[sql_command] [xml] NULL
 Non-Formatted:	[sql_command] [nvarchar](max) NULL
 	(Requires @get_outer_command option)
 	Shows the "outer" SQL command, i.e. the text of the batch or RPC sent to the server, 
 	if available
-
 Formatted:		[sql_text] [xml] NULL
 Non-Formatted:	[sql_text] [nvarchar](max) NULL
 	Shows the SQL text for active requests or the last statement executed
@@ -314,7 +308,6 @@ Non-Formatted:	[sql_text] [nvarchar](max) NULL
 		<timeout_exceeded />
 	If an error occurs, an error message will be sent, in the following format:
 		<error message="message" />
-
 Formatted/Non:	[query_plan] [xml] NULL
 	(Requires @get_plans option)
 	Shows the query plan for the request, if available.
@@ -322,49 +315,37 @@ Formatted/Non:	[query_plan] [xml] NULL
 		<timeout_exceeded />
 	If an error occurs, an error message will be sent, in the following format:
 		<error message="message" />
-
 Formatted/Non:	[blocking_session_id] [smallint] NULL
 	When applicable, shows the blocking SPID
-
 Formatted:		[blocked_session_count] [varchar](30) NULL
 Non-Formatted:	[blocked_session_count] [smallint] NULL
 	(Requires @find_block_leaders option)
 	The total number of SPIDs blocked by this session,
 	all the way down the blocking chain.
-
 Formatted:		[percent_complete] [varchar](30) NULL
 Non-Formatted:	[percent_complete] [real] NULL
 	When applicable, shows the percent complete (e.g. for backups, restores, and some rollbacks)
-
 Formatted/Non:	[host_name] [sysname] NOT NULL
 	Shows the host name for the connection
-
 Formatted/Non:	[login_name] [sysname] NOT NULL
 	Shows the login name for the connection
-
 Formatted/Non:	[database_name] [sysname] NULL
 	Shows the connected database
-
 Formatted/Non:	[program_name] [sysname] NULL
 	Shows the reported program/application name
-
 Formatted/Non:	[additional_info] [xml] NULL
 	(Requires @get_additional_info option)
 	Returns additional non-performance-related session/request information
 	If the script finds a SQL Agent job running, the name of the job and job step will be reported
 	If @get_task_info = 2 and the script finds a lock wait, the locked object will be reported
-
 Formatted/Non:	[start_time] [datetime] NOT NULL
 	For active requests, shows the time the request started
 	For sleeping sessions, shows the time the last batch completed
-
 Formatted/Non:	[login_time] [datetime] NOT NULL
 	Shows the time that the session connected
-
 Formatted/Non:	[request_id] [int] NULL
 	For active requests, shows the request_id
 	Should be 0 unless MARS is being used
-
 Formatted/Non:	[collection_time] [datetime] NOT NULL
 	Time that this script's final SELECT ran
 */
@@ -899,113 +880,151 @@ BEGIN;
 			UNION ALL
 			SELECT '[context_switches]', 12
 			WHERE
-				@get_task_info = 2
+				@get_task_info = 2	
+			UNION ALL		
+			SELECT '[requested_memory]', 13
+			WHERE
+				@advanced_memory_counters = 1
+				OR @memory_default=2
 			UNION ALL
-			SELECT '[used_memory]', 13
+			SELECT '[granted_memory]', 14
+			WHERE
+			@advanced_memory_counters = 1
+			OR @memory_default=3
 			UNION ALL
-			SELECT '[physical_io_delta]', 14
+			SELECT '[required_memory]', 15
+			WHERE
+			@advanced_memory_counters = 1
+			OR @memory_default=4
+			UNION
+			SELECT '[used_memory]', 16
+			WHERE
+			@advanced_memory_counters = 1
+				OR @memory_default=1
+			UNION ALL
+			SELECT '[max_used_memory]', 17
+			WHERE
+			@advanced_memory_counters = 1
+			OR @memory_default=5
+			UNION ALL
+			SELECT '[ideal_memory]', 18
+			WHERE
+			@advanced_memory_counters = 1
+			OR @memory_default=6
+			UNION ALL
+			SELECT '[DOP]', 19
+			WHERE
+			@advanced_memory_counters = 1
+			UNION ALL
+			SELECT '[QueryCost]', 20
+			WHERE
+			@advanced_memory_counters = 1
+			UNION ALL
+			SELECT '[physical_io_delta]', 21
 			WHERE
 				@delta_interval > 0	
 				AND @get_task_info = 2
 			UNION ALL
-			SELECT '[reads_delta]', 15
+			SELECT '[reads_delta]', 22
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[physical_reads_delta]', 16
+			SELECT '[physical_reads_delta]', 23
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[writes_delta]', 17
+			SELECT '[writes_delta]', 24
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[tempdb_allocations_delta]', 18
+			SELECT '[tempdb_allocations_delta]', 25
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[tempdb_current_delta]', 19
+			SELECT '[tempdb_current_delta]', 26
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[CPU_delta]', 20
+			SELECT '[CPU_delta]', 27
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[context_switches_delta]', 21
+			SELECT '[context_switches_delta]', 28
 			WHERE
 				@delta_interval > 0
 				AND @get_task_info = 2
 			UNION ALL
-			SELECT '[used_memory_delta]', 22
+			SELECT '[used_memory_delta]', 29
 			WHERE
 				@delta_interval > 0
 			UNION ALL
-			SELECT '[tasks]', 23
+			SELECT '[tasks]', 30
 			WHERE
 				@get_task_info = 2
 			UNION ALL
-			SELECT '[status]', 24
+			SELECT '[status]', 31
 			UNION ALL
-			SELECT '[wait_info]', 25
+			SELECT '[wait_info]', 32
 			WHERE
 				@get_task_info > 0
 				OR @find_block_leaders = 1
 			UNION ALL
-			SELECT '[locks]', 26
+			SELECT '[locks]', 33
 			WHERE
 				@get_locks = 1
 			UNION ALL
-			SELECT '[tran_start_time]', 27
+			SELECT '[tran_start_time]', 34
 			WHERE
 				@get_transaction_info = 1
 			UNION ALL
-			SELECT '[tran_log_writes]', 28
+			SELECT '[tran_log_writes]', 35
 			WHERE
 				@get_transaction_info = 1
 			UNION ALL
-			SELECT '[open_tran_count]', 29
+			SELECT '[open_tran_count]', 36
 			UNION ALL
-			SELECT '[sql_command]', 30
+			SELECT '[sql_command]', 37
 			WHERE
 				@get_outer_command = 1
 			UNION ALL
-			SELECT '[sql_text]', 31
+			SELECT '[sql_text]', 38
 			UNION ALL
-			SELECT '[query_plan]', 32
+			SELECT '[query_plan]', 39
 			WHERE
 				@get_plans >= 1
 			UNION ALL
-			SELECT '[blocking_session_id]', 33
+			SELECT '[blocking_session_id]', 40
 			WHERE
 				@get_task_info > 0
 				OR @find_block_leaders = 1
 			UNION ALL
-			SELECT '[blocked_session_count]', 34
+			SELECT '[blocked_session_count]', 41
 			WHERE
 				@find_block_leaders = 1
 			UNION ALL
-			SELECT '[percent_complete]', 35
+			SELECT '[percent_complete]', 42
 			UNION ALL
-			SELECT '[host_name]', 36
+			SELECT '[host_name]', 43
 			UNION ALL
-			SELECT '[login_name]', 37
+			SELECT '[login_name]', 44
 			UNION ALL
-			SELECT '[database_name]', 38
+			SELECT '[database_name]', 45
 			UNION ALL
-			SELECT '[program_name]', 39
+			SELECT '[program_name]', 46
 			UNION ALL
-			SELECT '[additional_info]', 40
+			SELECT '[additional_info]', 47
 			WHERE
 				@get_additional_info = 1
 			UNION ALL
-			SELECT '[start_time]', 41
+			SELECT '[start_time]', 48
 			UNION ALL
-			SELECT '[login_time]', 42
+			SELECT '[login_time]', 49
 			UNION ALL
-			SELECT '[request_id]', 43
+			SELECT '[request_id]', 50
 			UNION ALL
-			SELECT '[collection_time]', 44
+			SELECT '[collection_time]', 51
+
+
 		) AS x ON 
 			x.column_name LIKE token ESCAPE '|'
 	)
@@ -1034,7 +1053,7 @@ BEGIN;
 		RAISERROR('No valid column matches found in @output_column_list or no columns remain due to selected options.', 16, 1);
 		RETURN;
 	END;
-	
+
 	IF @destination_table <> ''
 	BEGIN;
 		SET @destination_table = 
@@ -1133,7 +1152,21 @@ BEGIN;
 			UNION ALL
 			SELECT '[context_switches]'
 			UNION ALL
+			SELECT '[requested_memory]'
+			UNION ALL
+			SELECT '[granted_memory]'
+			UNION ALL
+			SELECT '[required_memory]'
+			UNION ALL
 			SELECT '[used_memory]'
+			UNION ALL
+			SELECT '[max_used_memory]'
+			UNION ALL
+			SELECT '[ideal_memory]'
+			UNION ALL
+			SELECT '[DOP]'
+			UNION ALL
+			SELECT '[QueryCost]'
 			UNION ALL
 			SELECT '[physical_io_delta]'
 			UNION ALL
@@ -1220,7 +1253,14 @@ BEGIN;
 		CPU INT NULL,
 		thread_CPU_snapshot BIGINT NULL,
 		context_switches BIGINT NULL,
-		used_memory BIGINT NOT NULL, 
+		requested_memory BIGINT NOT NULL,
+		granted_memory BIGINT NOT NULL,
+		required_memory BIGINT NOT NULL,
+		used_memory BIGINT NOT NULL,
+		max_used_memory BIGINT NOT NULL,
+		ideal_memory BIGINT NOT NULL,
+		DOP BIGINT NOT NULL, 
+		QueryCost FLOAT NOT NULL,
 		tasks SMALLINT NULL,
 		status VARCHAR(30) NOT NULL,
 		wait_info NVARCHAR(4000) NULL,
@@ -1719,7 +1759,6 @@ BEGIN;
 			SET @blocker = 0;
 			DECLARE @i INT;
 			SET @i = 2147483647;
-
 			DECLARE @sessions TABLE
 			(
 				session_id SMALLINT NOT NULL,
@@ -1734,7 +1773,14 @@ BEGIN;
 				login_name NVARCHAR(128),
 				program_name NVARCHAR(128),
 				database_id SMALLINT,
-				memory_usage INT,
+				requested_memory_usage BIGINT,
+				granted_memory_usage BIGINT,
+				required_memory_usage BIGINT,
+				used_memory_usage BIGINT,
+				max_used_memory_usage BIGINT,
+				ideal_memory_usage BIGINT,
+				DOP INT,
+				QueryCost FLOAT,
 				open_tran_count SMALLINT, 
 				' +
 				CASE
@@ -1755,14 +1801,11 @@ BEGIN;
 				cmd VARCHAR(32),
 				PRIMARY KEY CLUSTERED (session_id, request_id) WITH (IGNORE_DUP_KEY = ON)
 			);
-
 			DECLARE @blockers TABLE
 			(
 				session_id INT NOT NULL PRIMARY KEY WITH (IGNORE_DUP_KEY = ON)
 			);
-
 			BLOCKERS:;
-
 			INSERT @sessions
 			(
 				session_id,
@@ -1777,7 +1820,14 @@ BEGIN;
 				login_name,
 				program_name,
 				database_id,
-				memory_usage,
+				requested_memory_usage,
+				granted_memory_usage,
+				required_memory_usage,
+				used_memory_usage,
+				max_used_memory_usage,
+				ideal_memory_usage,
+				DOP,
+				QueryCost ,
 				open_tran_count, 
 				' +
 				CASE
@@ -1810,7 +1860,14 @@ BEGIN;
 				spy.login_name,
 				spy.program_name,
 				spy.database_id,
-				spy.memory_usage,
+				spy.requested_memory_usage,
+				spy.granted_memory_usage,
+				spy.required_memory_usage,
+				spy.used_memory_usage,
+				spy.max_used_memory_usage,
+				spy.ideal_memory_usage,
+				spy.DOP,
+				spy.QueryCost,
 				spy.open_tran_count,
 				' +
 				CASE
@@ -1894,7 +1951,14 @@ BEGIN;
 						sp0.login_name,
 						sp0.program_name,
 						sp0.database_id,
-						sp0.memory_usage,
+						sp0.requested_memory_usage,
+						sp0.granted_memory_usage,
+						sp0.required_memory_usage,
+						sp0.used_memory_usage,
+						sp0.max_used_memory_usage,
+						sp0.ideal_memory_usage,
+						sp0.DOP,
+						sp0.QueryCost,
 						sp0.open_tran_count, 
 						' +
 						CASE
@@ -1944,7 +2008,14 @@ BEGIN;
 							MAX(sp1.login_name) OVER (PARTITION BY sp1.session_id, sp1.request_id) AS login_name,
 							sp1.program_name,
 							sp1.database_id,
-							MAX(sp1.memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS memory_usage,
+							MAX(sp1.requested_memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS requested_memory_usage,
+							MAX(sp1.granted_memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS granted_memory_usage,
+							MAX(sp1.required_memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS required_memory_usage,
+							MAX(sp1.used_memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS used_memory_usage,
+							MAX(sp1.max_used_memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS max_used_memory_usage,
+							MAX(sp1.ideal_memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS ideal_memory_usage,
+							MAX(sp1.DOP)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS DOP,
+							MAX(sp1.QueryCost)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS QueryCost,
 							MAX(sp1.open_tran_count)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS open_tran_count,
 							sp1.wait_type,
 							sp1.wait_resource,
@@ -1987,7 +2058,14 @@ BEGIN;
 									END COLLATE SQL_Latin1_General_CP1_CI_AS
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,
-								MAX(sp2.memusage) AS memory_usage,
+								MAX(mg.requested_memory_kb) AS requested_memory_usage,
+								MAX(mg.granted_memory_kb) AS granted_memory_usage,
+								MAX(mg.required_memory_kb) AS required_memory_usage,
+								MAX(mg.used_memory_kb) AS used_memory_usage,
+								MAX(mg.max_used_memory_kb) AS max_used_memory_usage,
+								MAX(mg.ideal_memory_kb) AS ideal_memory_usage,
+								MAX(mg.DOP) AS DOP,
+								MAX(mg.query_cost) AS QueryCost,
 								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
 								RTRIM(sp2.waitresource) AS wait_resource,
@@ -2022,18 +2100,14 @@ BEGIN;
 									CONVERT(INT, NULL) AS queue_id,
 									CONVERT(INT, NULL) AS database_id
 								FROM @blockers
-
 								UNION ALL
-
 								SELECT TOP(@i)
 									CONVERT(SMALLINT, 0),
 									CONVERT(INT, NULL) AS queue_id,
 									CONVERT(INT, NULL) AS database_id
 								WHERE
 									@blocker = 0
-
 								UNION ALL
-
 								SELECT TOP(@i)
 									CONVERT(SMALLINT, spid),
 									queue_id,
@@ -2049,6 +2123,10 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
+							LEFT JOIN 
+									sys.dm_exec_query_memory_grants mg 
+								ON 
+									mg.session_id =sp2.spid 
 							' +
 							CASE 
 								WHEN 
@@ -2187,9 +2265,7 @@ BEGIN;
 						FROM @sessions
 						WHERE
 							NULLIF(blocked, 0) IS NOT NULL
-
 						EXCEPT
-
 						SELECT TOP(@i)
 							session_id
 						FROM @sessions; 
@@ -2318,7 +2394,7 @@ BEGIN;
 						@output_column_list LIKE '%|[CPU|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
 							THEN
-								'x.CPU '
+								'COALESCE(x.CPU, 0) '
 					ELSE
 						'0 '
 				END + 
@@ -2349,6 +2425,40 @@ BEGIN;
 					' +
 				CASE
 					WHEN 
+						@output_column_list LIKE '%|[requested_memory|]%' ESCAPE '|'
+						--OR @output_column_list LIKE '%|[requested_memory_delta|]%' ESCAPE '|'
+							THEN 
+								'x.requested_memory '
+					ELSE 
+						'0 '
+				END + 
+					'AS requested_memory, 
+					' +
+
+				CASE
+					WHEN 
+						@output_column_list LIKE '%|[granted_memory|]%' ESCAPE '|'
+						--OR @output_column_list LIKE '%|[granted_memory_delta|]%' ESCAPE '|'
+							THEN 
+								'x.granted_memory '
+					ELSE 
+						'0 '
+				END + 
+					'AS granted_memory, 
+					' +
+				CASE
+					WHEN 
+						@output_column_list LIKE '%|[required_memory|]%' ESCAPE '|'
+						--OR @output_column_list LIKE '%|[required_memory_delta|]%' ESCAPE '|'
+							THEN 
+								'x.required_memory '
+					ELSE 
+						'0 '
+				END + 
+					'AS required_memory,
+					' + 
+				CASE
+					WHEN 
 						@output_column_list LIKE '%|[used_memory|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[used_memory_delta|]%' ESCAPE '|'
 							THEN 
@@ -2356,7 +2466,52 @@ BEGIN;
 					ELSE 
 						'0 '
 				END + 
-					'AS used_memory, 
+					'AS used_memory,
+					' + 
+				CASE
+					WHEN 
+						@output_column_list LIKE '%|[max_used_memory|]%' ESCAPE '|'
+						--OR @output_column_list LIKE '%|[max_used_memory_delta|]%' ESCAPE '|'
+							THEN 
+								'x.max_used_memory '
+					ELSE 
+						'0 '
+				END + 
+					'AS max_used_memory,
+					' + 
+				CASE
+					WHEN 
+						@output_column_list LIKE '%|[ideal_memory|]%' ESCAPE '|'
+						--OR @output_column_list LIKE '%|[ideal_memory_delta|]%' ESCAPE '|'
+							THEN 
+								'x.ideal_memory '
+					ELSE 
+						'0 '
+				END + 
+					'AS ideal_memory,
+					' + 
+				CASE
+					WHEN 
+						@output_column_list LIKE '%|[DOP|]%' ESCAPE '|'
+						--OR @output_column_list LIKE '%|[DOP_delta|]%' ESCAPE '|'--nonsense
+							THEN 
+								'x.DOP '
+					ELSE 
+						'0 '
+				END + 
+					'AS DOP, 
+					' +
+
+				CASE
+					WHEN 
+						@output_column_list LIKE '%|[QueryCost|]%' ESCAPE '|'
+						--OR @output_column_list LIKE '%|[used_memory_delta|]%' ESCAPE '|'
+							THEN 
+								'x.QueryCost '
+					ELSE 
+						'0 '
+				END + 
+					'AS QueryCost, 
 					' +
 				CASE
 					WHEN 
@@ -2596,7 +2751,7 @@ BEGIN;
 										x.lock_timeout,
 										x.deadlock_priority,
 										x.row_count,
-										x.command_type, 
+										x.command_type,
 										' +
 										CASE
 											WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
@@ -2779,11 +2934,18 @@ BEGIN;
 					SELECT TOP(@i)
 						sp.session_id,
 						sp.request_id,
-						COALESCE(r.logical_reads, s.logical_reads) AS reads,
-						COALESCE(r.reads, s.reads) AS physical_reads,
-						COALESCE(r.writes, s.writes) AS writes,
+						COALESCE(r.logical_reads, s.logical_reads,0) AS reads,
+						COALESCE(r.reads, s.reads,0) AS physical_reads,
+						COALESCE(r.writes, s.writes,0) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,
+						COALESCE(sp.requested_memory_usage, 0)  AS requested_memory,
+						COALESCE(sp.granted_memory_usage, 0) AS granted_memory,
+						COALESCE(sp.required_memory_usage, 0) AS required_memory,
+						COALESCE(sp.used_memory_usage, 0) AS used_memory,
+						COALESCE(sp.max_used_memory_usage, 0) AS max_used_memory,
+						COALESCE(sp.ideal_memory_usage, 0) AS ideal_memory,
+						COALESCE(sp.DOP, 0) AS DOP,
+						CAST(COALESCE(sp.QueryCost, 0.0) AS FLOAT) AS QueryCost,
 						LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
@@ -2897,6 +3059,10 @@ BEGIN;
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
 						)
+					LEFT JOIN 
+						sys.dm_exec_query_memory_grants mg 
+					ON 
+						mg.session_id= sp.session_id  
 				) AS y
 				' + 
 				CASE 
@@ -3353,9 +3519,7 @@ BEGIN;
 							WHERE
 								s0.session_id = tsu.session_id
 						) AS p
-
 						UNION ALL
-
 						SELECT TOP(@i)
 							ssu.session_id,
 							NULL AS request_id,
@@ -3442,7 +3606,14 @@ BEGIN;
 			CPU,
 			thread_CPU_snapshot,
 			context_switches,
+			requested_memory,
+			granted_memory,
+			required_memory,
 			used_memory,
+			max_used_memory,
+			ideal_memory,
+			DOP,
+			QueryCost,
 			tasks,
 			status,
 			wait_info,
@@ -4674,7 +4845,6 @@ BEGIN;
 					SET @job_name = NULL;
 					DECLARE @step_name sysname;
 					SET @step_name = NULL;
-
 					SELECT
 						@job_name = 
 							REPLACE
@@ -4708,7 +4878,6 @@ BEGIN;
 					WHERE
 						j.job_id = @job_id
 						AND s.step_id = @step_id;
-
 					IF @job_name IS NOT NULL
 					BEGIN;
 						UPDATE s
@@ -4940,12 +5109,55 @@ BEGIN;
 						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, context_switches), 1), 19)) AS '
 						ELSE ''
 					END + 'context_switches, ' +
+					--requested_memory
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, requested_memory))) OVER() - LEN(CONVERT(VARCHAR, requested_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory), 1), 19)) AS '
+						ELSE ''
+					END + 'requested_memory, ' +
+					--granted_memory
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, granted_memory))) OVER() - LEN(CONVERT(VARCHAR, granted_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, granted_memory), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, granted_memory), 1), 19)) AS '
+						ELSE ''
+					END + 'granted_memory, ' +
+					--required_memory
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, required_memory))) OVER() - LEN(CONVERT(VARCHAR, required_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, required_memory), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, required_memory), 1), 19)) AS '
+						ELSE ''
+					END + 'required_memory, ' +
 					--used_memory
 					CASE @format_output
 						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, used_memory))) OVER() - LEN(CONVERT(VARCHAR, used_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory), 1), 19)) AS '
 						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory), 1), 19)) AS '
 						ELSE ''
 					END + 'used_memory, ' +
+					--max_used_memory
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, max_used_memory))) OVER() - LEN(CONVERT(VARCHAR, max_used_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory), 1), 19)) AS '
+						ELSE ''
+					END + 'max_used_memory, ' +
+					--ideal_memory
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, ideal_memory))) OVER() - LEN(CONVERT(VARCHAR, ideal_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, ideal_memory), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, ideal_memory), 1), 19)) AS '
+						ELSE ''
+					END + 'ideal_memory, ' +
+					--DOP
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, DOP))) OVER() - LEN(CONVERT(VARCHAR, DOP))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, DOP), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, DOP), 1), 19)) AS '
+						ELSE ''
+					END + 'DOP, ' +
+					--QueryCost
+					CASE @format_output
+						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, CONVERT(DECIMAL(13,2),QueryCost)))) OVER() - LEN(CONVERT(VARCHAR, CONVERT(DECIMAL(13,2),QueryCost)))) + LEFT(CONVERT(CHAR(22), CONVERT(DECIMAL(13,2), QueryCost), 1), 19)) AS '
+						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(DECIMAL(13,2), QueryCost), 1), 19)) AS '
+
+						ELSE ''
+					END + 'QueryCost, ' +
 					CASE
 						WHEN @output_column_list LIKE '%|_delta|]%' ESCAPE '|' THEN
 							--physical_io_delta			
@@ -5073,7 +5285,7 @@ BEGIN;
 										END + 
 								'ELSE NULL ' +
 							'END AS context_switches_delta, ' +
-							--used_memory_delta
+							--used_memory_delta  --******This makes sense with the used_memory, and the max used, not sure of the rest. 
 							'CASE ' +
 								'WHEN ' +
 									'first_request_start_time = last_request_start_time ' + 
