@@ -2127,6 +2127,8 @@ BEGIN;
 									sys.dm_exec_query_memory_grants mg 
 								ON 
 									mg.session_id =sp2.spid 
+								AND
+									mg.request_id = sp2.request_id	
 							' +
 							CASE 
 								WHEN 
@@ -3062,7 +3064,9 @@ BEGIN;
 					LEFT JOIN 
 						sys.dm_exec_query_memory_grants mg 
 					ON 
-						mg.session_id= sp.session_id  
+						mg.session_id= sp.session_id 
+					AND 
+						mg.request_id = sp.request_id 
 				) AS y
 				' + 
 				CASE 
