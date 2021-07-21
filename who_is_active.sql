@@ -2123,12 +2123,25 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
-							LEFT JOIN 
-									sys.dm_exec_query_memory_grants mg 
-								ON 
-									mg.session_id =sp2.spid 
-								AND
-									mg.request_id = sp2.request_id	
+							LEFT JOIN sys.dm_exec_sessions AS es ON
+									es.session_id =  sp2.spid
+							LEFT JOIN sys.dm_exec_requests AS r ON
+								      r.session_id = es.session_id
+							LEFT JOIN sys.dm_exec_query_stats AS qs ON
+								      r.sql_handle = qs.sql_handle
+								AND	 r.plan_handle = qs.plan_handle
+								AND  r.statement_start_offset = qs.statement_start_offset
+								AND  r.statement_end_offset = qs.statement_end_offset
+							LEFT JOIN sys.dm_exec_query_memory_grants mg ON
+								     mg.session_id = sp2.spid 
+								AND  mg.request_id = sp2.request_id
+							LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
+								     mg.resource_semaphore_id = rs.resource_semaphore_id 
+								AND  mg.pool_id = rs.pool_id
+							LEFT JOIN sys.resource_governor_workload_groups wg ON
+							  		 es.group_id = wg.group_id
+							LEFT JOIN sys.resource_governor_resource_pools rp ON
+									 wg.pool_id = rp.pool_id	
 							' +
 							CASE 
 								WHEN 
@@ -3061,12 +3074,21 @@ BEGIN;
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
 						)
-					LEFT JOIN 
-						sys.dm_exec_query_memory_grants mg 
-					ON 
-						mg.session_id= sp.session_id 
-					AND 
-						mg.request_id = sp.request_id 
+							LEFT JOIN sys.dm_exec_query_stats AS qs ON
+								     r.sql_handle = qs.sql_handle
+								AND  r.plan_handle = qs.plan_handle
+								AND  r.statement_start_offset = qs.statement_start_offset
+								AND  r.statement_end_offset = qs.statement_end_offset
+							LEFT JOIN sys.dm_exec_query_memory_grants mg ON
+								     mg.session_id = sp.session_id 
+								AND  mg.request_id = sp.request_id
+							LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
+								     mg.resource_semaphore_id = rs.resource_semaphore_id 
+								AND  mg.pool_id = rs.pool_id
+							LEFT JOIN sys.resource_governor_workload_groups wg ON
+							  		 s.group_id = wg.group_id
+							LEFT JOIN sys.resource_governor_resource_pools rp ON
+									 wg.pool_id = rp.pool_id
 				) AS y
 				' + 
 				CASE 
