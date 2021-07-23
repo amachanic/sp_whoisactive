@@ -2695,7 +2695,7 @@ BEGIN;
 										(x.granted_memory / 1024.0) AS granted_memory_mb,
 										(x.ideal_memory / 1024.0) AS ideal_memory_mb,		
 										(x.required_memory / 1024.0) AS required_memory_mb,
-										(x.used_memory / 1024.0) AS used_memory_mb,
+										(x.query_used_memory / 1024.0) AS used_memory_mb,
 										(x.max_used_memory / 1024.0) AS max_used_memory_mb,
 										x.queue_id AS queue_id,
 										x.wait_order AS wait_order,
