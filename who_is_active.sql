@@ -2111,8 +2111,8 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
-							LEFT JOIN sys.dm_exec_query_memory_grants AS mg
-									ON mg.session_id = sp2.spid
+							LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
+								mg.session_id = sp2.spid
 
 							' +
 							CASE 
@@ -2770,12 +2770,8 @@ BEGIN;
 										x.request_time,
 										x.grant_time,
 										x.wait_time_ms,
-										--(x.requested_memory / 1024.0) AS requested_memory_mb,
-										--(x.granted_memory / 1024.0) AS granted_memory_mb,
 										(x.ideal_memory / 1024.0) AS ideal_memory_mb,		
 										(x.required_memory / 1024.0) AS required_memory_mb,
-										--(x.query_used_memory / 1024.0) AS used_memory_mb,
-										--(x.max_used_memory / 1024.0) AS max_used_memory_mb,
 										x.queue_id AS queue_id,
 										x.wait_order AS wait_order,
 										x.is_next_candidate AS is_next_candidate,
@@ -2919,7 +2915,7 @@ BEGIN;
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						--sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,
+						--sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory, 
 						COALESCE(sp.memory_usage, 0.00) AS used_memory,
 						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
 						COALESCE(mg.request_time,0) as request_time,
