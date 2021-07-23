@@ -90,7 +90,7 @@ ALTER PROC dbo.sp_WhoIsActive
 
 	--Will get memory grant info for any queries requesting memory
 	--Data comes from sys.dm_exec_query_memory_grants
-	--Available SQL Server 2012 SP3+ only
+	--Available SQL 2008 R2 SP3 10.50.6000.34 Tested
 	@get_memory_grant_info BIT = 0,
 
 	--Walk the blocking chain and count the number of 
