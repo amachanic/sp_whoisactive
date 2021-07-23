@@ -194,7 +194,7 @@ Formatted:		[tempdb_current] [varchar](30) NULL
 Non-Formatted:	[tempdb_current] [bigint] NULL
 	For an active request, number of TempDB pages currently allocated for the query
 	For a sleeping session, number of TempDB pages currently allocated for the session
-
+	
 Formatted:		[CPU] [varchar](30) NULL
 Non-Formatted:	[CPU] [int] NULL
 	For an active request, total CPU time consumed by the current query
@@ -206,13 +206,22 @@ Non-Formatted:	[context_switches] [bigint] NULL
 
 Formatted:		[used_memory] [varchar](30) NOT NULL
 Non-Formatted:	[used_memory] [bigint] NOT NULL
-	For an active request, total memory consumption for the current query
-	For a sleeping session, total current memory consumption
+	For an active request, used_memory for the current query
 
 Formatted:		[max_used_memory] [varchar](30) NOT NULL
 Non-Formatted:	[max_used_memory] [bigint] NOT NULL
-	For an active request, total memory consumption for the current query
-	For a sleeping session, total current memory consumption
+	For an active request, max_used_memory for the current query
+	(Requires @get_memory_grant_info=1)
+
+Formatted:		[requested_memory] [varchar](30) NOT NULL
+Non-Formatted:	[requested_memory] [bigint] NOT NULL
+	For an active request, requested_memory for the current query
+	(Requires @get_memory_grant_info=1)
+
+Formatted:		[granted_memory] [varchar](30) NOT NULL
+Non-Formatted:	[granted_memory] [bigint] NOT NULL
+	For an active request, granted_memory for the current query
+	(Requires @get_memory_grant_info=1)
 
 Formatted:		[physical_io_delta] [varchar](30) NULL
 Non-Formatted:	[physical_io_delta] [bigint] NULL
@@ -386,7 +395,7 @@ Formatted/Non:	[collection_time] [datetime] NOT NULL
 Formatted/Non:	[memory_grant_info] [xml] NULL
 	(Requires @get_memory_grant_info)
 	Returns information about query memory grants from dm_exec_query_memory_grants
-	SQL Server 2012 SP3+ only
+	SQL 2008 R2 SP3 10.50.6000.34 Tested
 */
 AS
 BEGIN;
