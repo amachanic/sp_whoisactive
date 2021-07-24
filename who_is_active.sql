@@ -399,6 +399,9 @@ Formatted/Non:	[memory_grant_info] [xml] NULL
 */
 AS
 BEGIN;
+	--Figure out the SQL version 
+	DECLARE @sql_version INT = (SELECT CASE WHEN @@VERSION LIKE '%2005%' THEN 2005 WHEN @@VERSION LIKE '%2008%' THEN 2008 WHEN @@VERSION LIKE '%2012%' THEN 2012 WHEN @@VERSION LIKE '%2014%' THEN 2014 WHEN @@VERSION LIKE '%2016%' THEN 2016 WHEN @@VERSION LIKE '%2017%' THEN 2017 WHEN @@VERSION LIKE '%2019%' THEN 2019 WHEN @@VERSION LIKE '%AZURE%' THEN 2032 ELSE -1 END)
+
 	SET NOCOUNT ON; 
 	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 	SET QUOTED_IDENTIFIER ON;
@@ -477,6 +480,18 @@ BEGIN;
 	IF @get_task_info NOT IN (0, 1, 2)
 	BEGIN;
 		RAISERROR('Valid values for @get_task_info are: 0, 1, or 2', 16, 1);
+		RETURN;
+	END;
+
+	IF @sql_version =-1
+	BEGIN;
+		RAISERROR('Sorry, you have an unsupported SQL Server Version', 16, 1);
+		RETURN;
+	END;
+
+	IF @sql_version <2008 and @get_memory_grant_info=1
+	BEGIN;
+		RAISERROR('Sorry, advanced memory options are not available on your SQL Server Version', 16, 1);
 		RETURN;
 	END;
 
@@ -2056,10 +2071,16 @@ BEGIN;
 											)
 									END COLLATE SQL_Latin1_General_CP1_CI_AS
 								) AS program_name,
-								MAX(sp2.dbid) AS database_id,
-								MAX(mg.used_memory_kb) AS memory_usage,
-								MAX(mg.max_used_memory_kb) AS max_memory_usage,
-								MAX(sp2.open_tran) AS open_tran_count,
+								MAX(sp2.dbid) AS database_id,' +
+								CASE 
+									WHEN @sql_version>2005 THEN
+										'MAX(mg.used_memory_kb) AS memory_usage,
+										MAX(mg.max_used_memory_kb) AS max_memory_usage,'
+									ELSE
+										'MAX(sp2.memusage) AS memory_usage,
+										0 AS max_memory_usage,'
+								END +
+								'MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
 								RTRIM(sp2.waitresource) AS wait_resource,
 								MAX(sp2.waittime) AS wait_time,
@@ -2119,11 +2140,17 @@ BEGIN;
 								(
 									blk.session_id = 0
 									AND @blocker = 0
-								)
-							LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
-								mg.session_id = sp2.spid
-
+								) 
 							' +
+							CASE 
+								WHEN @sql_version>2005 THEN
+
+								'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
+									mg.session_id = sp2.spid
+								' 
+								ELSE
+									''
+							END +
 							CASE 
 								WHEN 
 								(
@@ -2923,24 +2950,27 @@ BEGIN;
 						COALESCE(r.logical_reads, s.logical_reads) AS reads,
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
-						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						--sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory, 
-						COALESCE(sp.memory_usage, 0.00) AS used_memory,
-						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
-						COALESCE(mg.request_time,0) as request_time,
-						COALESCE(mg.grant_time,''19000101'') AS grant_time,
-						COALESCE(mg.wait_time_ms,0) as wait_time_ms,
-						COALESCE(mg.requested_memory_kb, 0.00) AS requested_memory,
-						COALESCE(mg.granted_memory_kb, 0.00) AS granted_memory,
-						COALESCE(mg.required_memory_kb, 0.00) AS required_memory,
-
-						COALESCE(mg.ideal_memory_kb, 0.00) AS ideal_memory,
-						COALESCE(mg.dop, 0.00) AS dop,
-						COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
-						COALESCE(mg.queue_id, 0) AS queue_id,
-						COALESCE(mg.wait_order,0) AS wait_order,
-						COALESCE(mg.is_next_candidate,0) AS is_next_candidate,
-						LOWER(sp.status) AS status,
+						COALESCE(r.CPU_time, s.CPU_time) AS CPU,' +
+						CASE 
+							WHEN @sql_version>2005 THEN
+								'COALESCE(sp.memory_usage, 0.00) AS used_memory,
+								COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
+								COALESCE(mg.request_time,0) as request_time,
+								COALESCE(mg.grant_time,''19000101'') AS grant_time,
+								COALESCE(mg.wait_time_ms,0) as wait_time_ms,
+								COALESCE(mg.requested_memory_kb, 0.00) AS requested_memory,
+								COALESCE(mg.granted_memory_kb, 0.00) AS granted_memory,
+								COALESCE(mg.required_memory_kb, 0.00) AS required_memory,
+								COALESCE(mg.ideal_memory_kb, 0.00) AS ideal_memory,
+								COALESCE(mg.dop, 0.00) AS dop,
+								COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
+								COALESCE(mg.queue_id, 0) AS queue_id,
+								COALESCE(mg.wait_order,0) AS wait_order,
+								COALESCE(mg.is_next_candidate,0) AS is_next_candidate,'
+							ELSE
+								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
+						END +
+						'LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
 						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
@@ -3052,7 +3082,10 @@ BEGIN;
 								r.start_time = s.last_request_start_time
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
-						)
+						)' +
+							CASE 
+								WHEN @sql_version>2005 THEN
+								'
 							LEFT JOIN sys.dm_exec_query_stats AS qs ON
 								     r.sql_handle = qs.sql_handle
 								AND  r.plan_handle = qs.plan_handle
@@ -3068,6 +3101,10 @@ BEGIN;
 							  		 s.group_id = wg.group_id
 							LEFT JOIN sys.resource_governor_resource_pools rp ON
 									 wg.pool_id = rp.pool_id
+								' 
+								ELSE
+									''
+							END + '
 				) AS y
 				' + 
 				CASE 
