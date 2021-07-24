@@ -1823,10 +1823,14 @@ BEGIN;
 						CASE
 							WHEN
 								spy.wait_type LIKE N''PAGE%LATCH_%''
+<<<<<<< Updated upstream
 								OR spy.wait_type = N''CXPACKET''
 <<<<<<< Updated upstream
 =======
 								OR spy.wait_type = N''CXCONSUMER''
+>>>>>>> Stashed changes
+=======
+								OR spy.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'')
 >>>>>>> Stashed changes
 								OR spy.wait_type LIKE N''LATCH[_]%''
 								OR spy.wait_type = N''OLEDB'' THEN
@@ -1908,19 +1912,31 @@ BEGIN;
 								OR @find_block_leaders = 1 
 							) THEN
 								'CASE
+<<<<<<< Updated upstream
 									WHEN sp0.wait_time > 0 AND sp0.wait_type <> N''CXPACKET'' THEN
+=======
+									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
+>>>>>>> Stashed changes
 										sp0.wait_type
 									ELSE
 										NULL
 								END AS wait_type,
 								CASE
+<<<<<<< Updated upstream
 									WHEN sp0.wait_time > 0 AND sp0.wait_type <> N''CXPACKET'' THEN 
+=======
+									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN 
+>>>>>>> Stashed changes
 										sp0.wait_resource
 									ELSE
 										NULL
 								END AS wait_resource,
 								CASE
+<<<<<<< Updated upstream
 									WHEN sp0.wait_type <> N''CXPACKET'' THEN
+=======
+									WHEN sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
+>>>>>>> Stashed changes
 										sp0.wait_time
 									ELSE
 										0
@@ -2743,6 +2759,7 @@ BEGIN;
 															N''*''
 													END +
 												N'')''
+<<<<<<< Updated upstream
 											WHEN y.wait_type = N''CXPACKET'' THEN
 <<<<<<< Updated upstream
 												N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7, 4)
@@ -2756,6 +2773,16 @@ BEGIN;
 																   CHARINDEX(N''nodeId'', y.resource_description) + 7, 
 																   CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
 																   - 7 - CHARINDEX(N''nodeId'', y.resource_description))
+>>>>>>> Stashed changes
+=======
+											WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
+												N'':'' + SUBSTRING(y.resource_description, 
+																   CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+																   CASE 
+                                                                       WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) > 0
+                                                                       THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description))
+                                                                       ELSE 4
+                                                                   END
 >>>>>>> Stashed changes
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
@@ -3190,6 +3217,7 @@ BEGIN;
 																				N''*''
 																		END +
 																	N'')''
+<<<<<<< Updated upstream
 																WHEN wt.wait_type = N''CXPACKET'' THEN
 <<<<<<< Updated upstream
 																	N'':'' + SUBSTRING(wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7, 4)
@@ -3203,6 +3231,16 @@ BEGIN;
 																					   CHARINDEX(N''nodeId'', wt.resource_description) + 7, 
 																					   CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7)
 																					   - 7 - CHARINDEX(N''nodeId'', wt.resource_description))
+>>>>>>> Stashed changes
+=======
+											                    WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
+											                    	N'':'' + SUBSTRING(y.resource_description, 
+											                    					   CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+											                    					   CASE 
+                                                                                           WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) > 0
+                                                                                           THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description))
+                                                                                           ELSE 4
+                                                                                       END
 >>>>>>> Stashed changes
 																WHEN wt.wait_type LIKE N''LATCH[_]%'' THEN
 																	N'' ['' + LEFT(wt.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', wt.resource_description), 0), LEN(wt.resource_description) + 1) - 1) + N'']''
