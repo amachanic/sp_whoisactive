@@ -1070,7 +1070,7 @@ BEGIN;
 			UNION ALL
 			SELECT '[max_used_memory_delta]', 22
 			WHERE
-				@delta_interval > 0
+				@delta_interval > 0 AND @get_memory_grant_info = 1
 
 		) AS x ON 
 			x.column_name LIKE token ESCAPE '|'
@@ -2802,22 +2802,65 @@ BEGIN;
 						AND @get_memory_grant_info = 1 THEN
 				'
 								(
-									SELECT TOP(@i)	 
-										x.request_time,
-										x.grant_time,
-										x.wait_time_ms,
-										(x.ideal_memory / 1024.0) AS ideal_memory_mb,		
-										(x.required_memory / 1024.0) AS required_memory_mb,
-										x.queue_id AS queue_id,
-										x.wait_order AS wait_order,
-										x.is_next_candidate AS is_next_candidate,
-										x.dop,
-										CAST(x.query_subtree_cost as NUMERIC(13,4)) as query_subtree_cost
+									SELECT TOP(@i)
+										(SELECT TOP(@i)	 
+											x.request_time,
+											x.grant_time,
+											x.wait_time_ms,
+											x.requested_memory AS requested_memory_kb,	
+											x.granted_memory AS granted_memory_kb,
+											x.used_memory AS used_memory_kb,	
+											x.max_used_memory AS max_used_memory_kb,
+											x.ideal_memory AS ideal_memory_kb,	
+											x.required_memory AS required_memory_kb,
+											x.queue_id AS queue_id,
+											x.wait_order AS wait_order,
+											x.is_next_candidate AS is_next_candidate,
+											x.dop,
+											CAST(x.query_subtree_cost as NUMERIC(13,4)) as query_subtree_cost
+										FOR XML 
+										PATH(''query_memory_grants''), 
+										TYPE
+										),
+										(SELECT TOP(@i)
+											x.rs_timeout_error_count,
+											x.rs_target_memory_mb,
+											x.rs_max_target_memory_kb,
+											x.rs_total_memory_kb,
+											x.rs_available_memory_kb,
+											x.rs_granted_memory_kb,
+											x.rs_used_memory_kb,
+											x.rs_grantee_count,
+											x.rs_waiter_count
+										FOR XML 
+										PATH(''query_resource_semaphores''), 
+										TYPE
+										),
+										(SELECT TOP(@i)	
+											x.wg_name,
+											x.wg_request_max_memory_grant_percent,
+											x.wg_request_max_cpu_time_sec,
+											x.wg_request_memory_grant_timeout_sec,
+											x.wg_max_dop
+										FOR XML 
+										PATH(''work_groups''), 
+										TYPE
+										),
+										(SELECT TOP(@i)	
+											x.rp_name,
+											x.rp_min_memory_percent,
+											x.rp_max_memory_percent,
+											x.rp_min_cpu_percent,
+											x.rp_max_cpu_percent
+										FOR XML 
+										PATH(''resource_pools''), 
+										TYPE
+										)
 									FOR XML 
-										PATH(''memory''), 
+										PATH(''memory_counters''), 
 										TYPE
 								)				
-				'
+								'
 					ELSE 
 				'NULL '
 				END + 
@@ -2965,9 +3008,28 @@ BEGIN;
 								COALESCE(mg.dop, 0.00) AS dop,
 								COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
 								COALESCE(mg.queue_id, 0) AS queue_id,
-								COALESCE(mg.wait_order,0) AS wait_order,
-								COALESCE(mg.is_next_candidate,0) AS is_next_candidate,'
-							ELSE
+								COALESCE(mg.wait_order, 0) AS wait_order,
+								COALESCE(mg.is_next_candidate, 0) AS is_next_candidate,						
+								COALESCE(rs.target_memory_kb, 0) AS rs_target_memory_mb,
+								COALESCE(rs.max_target_memory_kb, 0) AS rs_max_target_memory_kb,
+								COALESCE(rs.total_memory_kb, 0) AS rs_total_memory_kb,
+								COALESCE(rs.available_memory_kb, 0) AS rs_available_memory_kb,
+								COALESCE(rs.granted_memory_kb, 0) AS rs_granted_memory_kb,
+								COALESCE(rs.used_memory_kb, 0) AS rs_used_memory_kb,
+								COALESCE(rs.grantee_count, 0) AS rs_grantee_count,
+								COALESCE(rs.waiter_count, 0) AS rs_waiter_count,
+								COALESCE(rs.timeout_error_count, 0) AS rs_timeout_error_count,
+								COALESCE(wg.name, ''NA'') AS wg_name,
+								COALESCE(wg.request_max_memory_grant_percent, 0) AS wg_request_max_memory_grant_percent,
+								COALESCE(wg.request_max_cpu_time_sec, 0) AS wg_request_max_cpu_time_sec,
+								COALESCE(wg.request_memory_grant_timeout_sec, 0) AS wg_request_memory_grant_timeout_sec,
+								COALESCE(wg.max_dop, 0) AS wg_max_dop,
+								COALESCE(rp.name, ''NA'') AS rp_name,
+								COALESCE(rp.min_memory_percent, 0) AS rp_min_memory_percent,
+								COALESCE(rp.max_memory_percent, 0) AS rp_max_memory_percent,
+								COALESCE(rp.min_cpu_percent, 0) AS rp_min_cpu_percent,
+								COALESCE(rp.max_cpu_percent, 0) AS rp_max_cpu_percent,'
+							ELSE 
 								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
 						END +
 						'LOWER(sp.status) AS status,
