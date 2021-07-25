@@ -274,6 +274,7 @@ Formatted/Non:	[wait_info] [nvarchar](4000) NULL
 	If wait type E is a page latch wait and the page is of a "special" type (e.g. PFS, GAM, SGAM), 
 	the page type will be identified.
 	If wait type E is CXPACKET, the nodeId from the query plan will be identified
+    For versions with expanded CX waits (CXCONSUMER, CXSYNC_PORT, CXSYNC_CONSUMER)
 
 Formatted/Non:	[locks] [xml] NULL
 	(Requires @get_locks option)
@@ -1823,7 +1824,7 @@ BEGIN;
 						CASE
 							WHEN
 								spy.wait_type LIKE N''PAGE%LATCH_%''
-								OR spy.wait_type = N''CXPACKET''
+								OR spy.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'')
 								OR spy.wait_type LIKE N''LATCH[_]%''
 								OR spy.wait_type = N''OLEDB'' THEN
 									spy.wait_resource
@@ -1904,19 +1905,19 @@ BEGIN;
 								OR @find_block_leaders = 1 
 							) THEN
 								'CASE
-									WHEN sp0.wait_time > 0 AND sp0.wait_type <> N''CXPACKET'' THEN
+									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
 										sp0.wait_type
 									ELSE
 										NULL
 								END AS wait_type,
 								CASE
-									WHEN sp0.wait_time > 0 AND sp0.wait_type <> N''CXPACKET'' THEN 
+									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN 
 										sp0.wait_resource
 									ELSE
 										NULL
 								END AS wait_resource,
 								CASE
-									WHEN sp0.wait_type <> N''CXPACKET'' THEN
+									WHEN sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
 										sp0.wait_time
 									ELSE
 										0
@@ -2739,8 +2740,13 @@ BEGIN;
 															N''*''
 													END +
 												N'')''
-											WHEN y.wait_type = N''CXPACKET'' THEN
-												N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7, 4)
+											WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
+												N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7,
+                                                             CASE 
+	                                                     	    WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description)) > 0
+	                                                     		THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description) 
+                                                                ELSE 4 
+                                                             END)
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
 											WHEN
@@ -3174,8 +3180,13 @@ BEGIN;
 																				N''*''
 																		END +
 																	N'')''
-																WHEN wt.wait_type = N''CXPACKET'' THEN
-																	N'':'' + SUBSTRING(wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7, 4)
+											                    WHEN wt.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
+											                    	N'':'' + SUBSTRING(wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7,
+                                                                                 CASE 
+	                                                                         	    WHEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description)) > 0
+	                                                                         		THEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', wt.resource_description) 
+                                                                                    ELSE 4 
+                                                                                 END)
 																WHEN wt.wait_type LIKE N''LATCH[_]%'' THEN
 																	N'' ['' + LEFT(wt.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', wt.resource_description), 0), LEN(wt.resource_description) + 1) - 1) + N'']''
 																ELSE 
