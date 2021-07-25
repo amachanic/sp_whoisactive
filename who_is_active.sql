@@ -89,8 +89,10 @@ ALTER PROC dbo.sp_WhoIsActive
 	@get_additional_info BIT = 0,
 
 	--Will get memory grant info for any queries requesting memory
-	--Data comes from sys.dm_exec_query_memory_grants
-	--Available SQL 2008 R2 SP3 10.50.6000.34 Tested
+	--Data comes from DMV's sys.dm_exec_query_memory_grants
+	--sys.dm_exec_query_resource_semaphores, sys.resource_governor_workload_groups
+	--sys.resource_governor_resource_pools, and sys.dm_exec_query_stats
+	--Tested on SQL 2008 R2 SP3 10.50.6000.34 to 2017
 	@get_memory_grant_info BIT = 0,
 
 	--Walk the blocking chain and count the number of 
@@ -215,12 +217,12 @@ Non-Formatted:	[max_used_memory] [bigint] NOT NULL
 
 Formatted:		[requested_memory] [varchar](30) NOT NULL
 Non-Formatted:	[requested_memory] [bigint] NOT NULL
-	For an active request, requested_memory for the current query
+	For an active request, requested_memory kb for the current query
 	(Requires @get_memory_grant_info=1)
 
 Formatted:		[granted_memory] [varchar](30) NOT NULL
 Non-Formatted:	[granted_memory] [bigint] NOT NULL
-	For an active request, granted_memory for the current query
+	For an active request, granted_memory kb for the current query
 	(Requires @get_memory_grant_info=1)
 
 Formatted:		[physical_io_delta] [varchar](30) NULL
@@ -273,12 +275,12 @@ Non-Formatted:	[context_switches_delta] [bigint] NULL
 
 Formatted:		[used_memory_delta] [varchar](30) NULL
 Non-Formatted:	[used_memory_delta] [bigint] NULL
-	Difference between the memory usage reported on the first and second collections
+	Difference between the memory usage kb reported on the first and second collections
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[max_used_memory_delta] [varchar](30) NULL
 Non-Formatted:	[max_used_memory_delta] [bigint] NULL
-	Difference between the max memory usage reported on the first and second collections
+	Difference between the max memory usage kb reported on the first and second collections
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[tasks] [varchar](30) NULL
@@ -2817,43 +2819,43 @@ BEGIN;
 											x.wait_order AS wait_order,
 											x.is_next_candidate AS is_next_candidate,
 											x.dop,
-											CAST(x.query_subtree_cost as NUMERIC(13,4)) as query_subtree_cost
+											CAST(x.query_subtree_cost AS NUMERIC(13,4)) AS query_subtree_cost
 										FOR XML 
 										PATH(''query_memory_grants''), 
 										TYPE
 										),
 										(SELECT TOP(@i)
-											x.rs_timeout_error_count,
-											x.rs_target_memory_mb,
-											x.rs_max_target_memory_kb,
-											x.rs_total_memory_kb,
-											x.rs_available_memory_kb,
-											x.rs_granted_memory_kb,
-											x.rs_used_memory_kb,
-											x.rs_grantee_count,
-											x.rs_waiter_count
+											x.timeout_error_count,
+											x.target_memory_mb,
+											x.max_target_memory_kb,
+											x.total_memory_kb,
+											x.available_memory_kb,
+											x.granted_memory_kb,
+											x.used_memory_kb,
+											x.grantee_count,
+											x.waiter_count
 										FOR XML 
 										PATH(''query_resource_semaphores''), 
 										TYPE
 										),
 										(SELECT TOP(@i)	
-											x.wg_name,
-											x.wg_request_max_memory_grant_percent,
-											x.wg_request_max_cpu_time_sec,
-											x.wg_request_memory_grant_timeout_sec,
-											x.wg_max_dop
+											x.wg_name AS name,
+											x.request_max_memory_grant_percent,
+											x.request_max_cpu_time_sec,
+											x.request_memory_grant_timeout_sec,
+											x.max_dop
 										FOR XML 
-										PATH(''work_groups''), 
+										PATH(''resource_governor_workload_groups''), 
 										TYPE
 										),
 										(SELECT TOP(@i)	
-											x.rp_name,
-											x.rp_min_memory_percent,
-											x.rp_max_memory_percent,
-											x.rp_min_cpu_percent,
-											x.rp_max_cpu_percent
+											x.rp_name AS name,
+											x.min_memory_percent,
+											x.max_memory_percent,
+											x.min_cpu_percent,
+											x.max_cpu_percent
 										FOR XML 
-										PATH(''resource_pools''), 
+										PATH(''resource_governor_resource_pools''), 
 										TYPE
 										)
 									FOR XML 
@@ -3010,25 +3012,25 @@ BEGIN;
 								COALESCE(mg.queue_id, 0) AS queue_id,
 								COALESCE(mg.wait_order, 0) AS wait_order,
 								COALESCE(mg.is_next_candidate, 0) AS is_next_candidate,						
-								COALESCE(rs.target_memory_kb, 0) AS rs_target_memory_mb,
-								COALESCE(rs.max_target_memory_kb, 0) AS rs_max_target_memory_kb,
-								COALESCE(rs.total_memory_kb, 0) AS rs_total_memory_kb,
-								COALESCE(rs.available_memory_kb, 0) AS rs_available_memory_kb,
-								COALESCE(rs.granted_memory_kb, 0) AS rs_granted_memory_kb,
-								COALESCE(rs.used_memory_kb, 0) AS rs_used_memory_kb,
-								COALESCE(rs.grantee_count, 0) AS rs_grantee_count,
-								COALESCE(rs.waiter_count, 0) AS rs_waiter_count,
-								COALESCE(rs.timeout_error_count, 0) AS rs_timeout_error_count,
+								COALESCE(rs.target_memory_kb, 0) AS target_memory_mb,
+								COALESCE(rs.max_target_memory_kb, 0) AS max_target_memory_kb,
+								COALESCE(rs.total_memory_kb, 0) AS total_memory_kb,
+								COALESCE(rs.available_memory_kb, 0) AS available_memory_kb,
+								COALESCE(rs.granted_memory_kb, 0) AS granted_memory_kb,
+								COALESCE(rs.used_memory_kb, 0) AS used_memory_kb,
+								COALESCE(rs.grantee_count, 0) AS grantee_count,
+								COALESCE(rs.waiter_count, 0) AS waiter_count,
+								COALESCE(rs.timeout_error_count, 0) AS timeout_error_count,
 								COALESCE(wg.name, ''NA'') AS wg_name,
-								COALESCE(wg.request_max_memory_grant_percent, 0) AS wg_request_max_memory_grant_percent,
-								COALESCE(wg.request_max_cpu_time_sec, 0) AS wg_request_max_cpu_time_sec,
-								COALESCE(wg.request_memory_grant_timeout_sec, 0) AS wg_request_memory_grant_timeout_sec,
-								COALESCE(wg.max_dop, 0) AS wg_max_dop,
+								COALESCE(wg.request_max_memory_grant_percent, 0) AS request_max_memory_grant_percent,
+								COALESCE(wg.request_max_cpu_time_sec, 0) AS request_max_cpu_time_sec,
+								COALESCE(wg.request_memory_grant_timeout_sec, 0) AS request_memory_grant_timeout_sec,
+								COALESCE(wg.max_dop, 0) AS max_dop,
 								COALESCE(rp.name, ''NA'') AS rp_name,
-								COALESCE(rp.min_memory_percent, 0) AS rp_min_memory_percent,
-								COALESCE(rp.max_memory_percent, 0) AS rp_max_memory_percent,
-								COALESCE(rp.min_cpu_percent, 0) AS rp_min_cpu_percent,
-								COALESCE(rp.max_cpu_percent, 0) AS rp_max_cpu_percent,'
+								COALESCE(rp.min_memory_percent, 0) AS min_memory_percent,
+								COALESCE(rp.max_memory_percent, 0) AS max_memory_percent,
+								COALESCE(rp.min_cpu_percent, 0) AS min_cpu_percent,
+								COALESCE(rp.max_cpu_percent, 0) AS max_cpu_percent,'
 							ELSE 
 								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
 						END +
