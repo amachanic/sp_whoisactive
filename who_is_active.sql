@@ -2896,7 +2896,7 @@ BEGIN;
 						END,
 						0
 					) AS tempdb_current, 
-					' +
+			' +
 					CASE
 						WHEN 
 							(
@@ -2904,87 +2904,87 @@ BEGIN;
 								OR @find_block_leaders = 1
 							) THEN
 								'N''('' + CONVERT(NVARCHAR, y.wait_duration_ms) + N''ms)'' +
-									y.wait_type +
-										CASE
-											WHEN y.wait_type LIKE N''PAGE%LATCH_%'' THEN
-												N'':'' +
-												COALESCE(DB_NAME(CONVERT(INT, LEFT(y.resource_description, CHARINDEX(N'':'', y.resource_description) - 1))), N''(null)'') +
-												N'':'' +
-												SUBSTRING(y.resource_description, CHARINDEX(N'':'', y.resource_description) + 1, LEN(y.resource_description) - CHARINDEX(N'':'', REVERSE(y.resource_description)) - CHARINDEX(N'':'', y.resource_description)) +
-												N''('' +
-													CASE
-														WHEN
-															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 1 OR
-															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) % 8088 = 0
-																THEN 
-																	N''PFS''
-														WHEN
-															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 2 OR
-															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) % 511232 = 0
-																THEN 
-																	N''GAM''
-														WHEN
-															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 3 OR
-															(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 1) % 511232 = 0
-																THEN
-																	N''SGAM''
-														WHEN
-															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 6 OR
-															(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 6) % 511232 = 0 
-																THEN 
-																	N''DCM''
-														WHEN
-															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 7 OR
-															(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 7) % 511232 = 0 
-																THEN 
-																	N''BCM''
-														ELSE 
-															N''*''
-													END +
-												N'')''
-											WHEN y.wait_type = N''CXPACKET'' THEN
-												N'':'' + SUBSTRING(y.resource_description, 
-																   CHARINDEX(N''nodeId'', y.resource_description) + 7, 
-																   CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
-																   - 7 - CHARINDEX(N''nodeId'', y.resource_description))
-											WHEN y.wait_type = N''CXCONSUMER'' THEN
-												N'':'' + SUBSTRING(y.resource_description, 
-																   CHARINDEX(N''nodeId'', y.resource_description) + 7, 
-																   CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
-																   - 7 - CHARINDEX(N''nodeId'', y.resource_description))
-											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
-												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
-											WHEN
-												y.wait_type = N''OLEDB''
-												AND y.resource_description LIKE N''%(SPID=%)'' THEN
-													N''['' + LEFT(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) - 2) +
-														N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) + 6, CHARINDEX(N'')'', y.resource_description, (CHARINDEX(N''(SPID='', y.resource_description) + 6)) - (CHARINDEX(N''(SPID='', y.resource_description) + 6)) + '']''
-											ELSE
-												N''''
-										END COLLATE Latin1_General_Bin2 AS sys_wait_info, 
-										'
-							ELSE
-								''
-						END +
+					y.wait_type +
 						CASE
-							WHEN @get_task_info = 2 THEN
-								'tasks.physical_io,
-								tasks.context_switches,
-								tasks.tasks,
-								tasks.block_info,
-								tasks.wait_info AS task_wait_info,
-								tasks.thread_CPU_snapshot,
-								'
+							WHEN y.wait_type LIKE N''PAGE%LATCH_%'' THEN
+								N'':'' +
+								COALESCE(DB_NAME(CONVERT(INT, LEFT(y.resource_description, CHARINDEX(N'':'', y.resource_description) - 1))), N''(null)'') +
+								N'':'' +
+								SUBSTRING(y.resource_description, CHARINDEX(N'':'', y.resource_description) + 1, LEN(y.resource_description) - CHARINDEX(N'':'', REVERSE(y.resource_description)) - CHARINDEX(N'':'', y.resource_description)) +
+								N''('' +
+									CASE
+										WHEN
+											CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 1 OR
+											CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) % 8088 = 0
+												THEN 
+													N''PFS''
+										WHEN
+											CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 2 OR
+											CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) % 511232 = 0
+												THEN 
+													N''GAM''
+										WHEN
+											CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 3 OR
+											(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 1) % 511232 = 0
+												THEN
+													N''SGAM''
+										WHEN
+											CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 6 OR
+											(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 6) % 511232 = 0 
+												THEN 
+													N''DCM''
+										WHEN
+											CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 7 OR
+											(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 7) % 511232 = 0 
+												THEN 
+													N''BCM''
+										ELSE 
+											N''*''
+									END +
+								N'')''
+							WHEN y.wait_type = N''CXPACKET'' THEN
+								N'':'' + SUBSTRING(y.resource_description, 
+													CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+													CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
+													- 7 - CHARINDEX(N''nodeId'', y.resource_description))
+							WHEN y.wait_type = N''CXCONSUMER'' THEN
+								N'':'' + SUBSTRING(y.resource_description, 
+													CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+													CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
+													- 7 - CHARINDEX(N''nodeId'', y.resource_description))
+							WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
+								N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
+							WHEN
+								y.wait_type = N''OLEDB''
+								AND y.resource_description LIKE N''%(SPID=%)'' THEN
+									N''['' + LEFT(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) - 2) +
+										N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) + 6, CHARINDEX(N'')'', y.resource_description, (CHARINDEX(N''(SPID='', y.resource_description) + 6)) - (CHARINDEX(N''(SPID='', y.resource_description) + 6)) + '']''
 							ELSE
-								'' 
+								N''''
+						END COLLATE Latin1_General_Bin2 AS sys_wait_info, 
+									'
+						ELSE
+							''
 					END +
-					CASE 
-						WHEN NOT (@get_avg_time = 1 AND @recursion = 1) THEN
-							'CONVERT(INT, NULL) '
-						ELSE 
-							'qs.total_elapsed_time / qs.execution_count '
-					END + 
-						'AS avg_elapsed_time 
+					CASE
+						WHEN @get_task_info = 2 THEN
+							'tasks.physical_io,
+							tasks.context_switches,
+							tasks.tasks,
+							tasks.block_info,
+							tasks.wait_info AS task_wait_info,
+							tasks.thread_CPU_snapshot,
+							'
+						ELSE
+							''
+						END+
+				CASE 
+					WHEN NOT (@get_avg_time = 1 AND @recursion = 1) THEN
+						'CONVERT(INT, NULL) '
+					ELSE 
+						'qs.total_elapsed_time / qs.execution_count '
+				END + 
+				'AS avg_elapsed_time 
 				FROM
 				(
 					SELECT TOP(@i)
@@ -3150,20 +3150,20 @@ BEGIN;
 				WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
 '
 					LEFT JOIN sys.dm_exec_query_stats AS qs ON
-							 r.sql_handle = qs.sql_handle
-						AND  r.plan_handle = qs.plan_handle
-						AND  r.statement_start_offset = qs.statement_start_offset
-						AND  r.statement_end_offset = qs.statement_end_offset
+							r.sql_handle = qs.sql_handle
+						AND	r.plan_handle = qs.plan_handle
+						AND	r.statement_start_offset = qs.statement_start_offset
+						AND	r.statement_end_offset = qs.statement_end_offset
 					LEFT JOIN sys.dm_exec_query_memory_grants mg ON
-							 mg.session_id = sp.session_id 
-						AND  mg.request_id = sp.request_id
+							mg.session_id = sp.session_id 
+						AND	mg.request_id = sp.request_id
 					LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
-							 mg.resource_semaphore_id = rs.resource_semaphore_id 
-						AND  mg.pool_id = rs.pool_id
+							mg.resource_semaphore_id = rs.resource_semaphore_id 
+						AND	mg.pool_id = rs.pool_id
 					LEFT JOIN sys.resource_governor_workload_groups wg ON
-							  	s.group_id = wg.group_id
+							s.group_id = wg.group_id
 					LEFT JOIN sys.resource_governor_resource_pools rp ON
-								wg.pool_id = rp.pool_id'
+							wg.pool_id = rp.pool_id'
 				ELSE
 					''
 			END + '
@@ -3617,11 +3617,11 @@ BEGIN;
 							tsu.session_id,
 							tsu.request_id,
 							tsu.user_objects_alloc_page_count +
-								tsu.internal_objects_alloc_page_count AS tempdb_allocations,
+							tsu.internal_objects_alloc_page_count AS tempdb_allocations,
 							tsu.user_objects_alloc_page_count +
-								tsu.internal_objects_alloc_page_count -
-								tsu.user_objects_dealloc_page_count -
-								tsu.internal_objects_dealloc_page_count AS tempdb_current
+							tsu.internal_objects_alloc_page_count -
+							tsu.user_objects_dealloc_page_count -
+							tsu.internal_objects_dealloc_page_count AS tempdb_current
 						FROM sys.dm_db_task_space_usage AS tsu
 						CROSS APPLY
 						(
@@ -3637,12 +3637,8 @@ BEGIN;
 						SELECT TOP(@i)
 							ssu.session_id,
 							NULL AS request_id,
-							ssu.user_objects_alloc_page_count +
-								ssu.internal_objects_alloc_page_count AS tempdb_allocations,
-							ssu.user_objects_alloc_page_count +
-								ssu.internal_objects_alloc_page_count -
-								ssu.user_objects_dealloc_page_count -
-								ssu.internal_objects_dealloc_page_count AS tempdb_current
+							ssu.user_objects_alloc_page_count + ssu.internal_objects_alloc_page_count AS tempdb_allocations,
+							ssu.user_objects_alloc_page_count + ssu.internal_objects_alloc_page_count -	ssu.user_objects_dealloc_page_count - ssu.internal_objects_dealloc_page_count AS tempdb_current
 						FROM sys.dm_db_session_space_usage AS ssu
 						CROSS APPLY
 						(
