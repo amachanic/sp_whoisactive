@@ -208,22 +208,25 @@ Non-Formatted:	[context_switches] [bigint] NULL
 
 Formatted:		[used_memory] [varchar](30) NOT NULL
 Non-Formatted:	[used_memory] [bigint] NOT NULL
-	For an active request, used_memory for the current query
+	For an active request, total memory consumption for the current query (memusage + granted_memory) in Pages
+	For a sleeping session, total current memory consumption
+	(When @get_memory_grant_info = 1)
+	For an active request, used_memory kb for the current query
 
 Formatted:		[max_used_memory] [varchar](30) NOT NULL
 Non-Formatted:	[max_used_memory] [bigint] NOT NULL
-	For an active request, max_used_memory for the current query
-	(Requires @get_memory_grant_info=1)
+	For an active request, max_used_memory kb for the current query
+	(Requires @get_memory_grant_info = 1)
 
 Formatted:		[requested_memory] [varchar](30) NOT NULL
 Non-Formatted:	[requested_memory] [bigint] NOT NULL
 	For an active request, requested_memory kb for the current query
-	(Requires @get_memory_grant_info=1)
+	(Requires @get_memory_grant_info = 1)
 
 Formatted:		[granted_memory] [varchar](30) NOT NULL
 Non-Formatted:	[granted_memory] [bigint] NOT NULL
 	For an active request, granted_memory kb for the current query
-	(Requires @get_memory_grant_info=1)
+	(Requires @get_memory_grant_info = 1)
 
 Formatted:		[physical_io_delta] [varchar](30) NULL
 Non-Formatted:	[physical_io_delta] [bigint] NULL
