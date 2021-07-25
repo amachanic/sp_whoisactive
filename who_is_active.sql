@@ -1072,7 +1072,8 @@ BEGIN;
 			UNION ALL
 			SELECT '[max_used_memory_delta]', 22
 			WHERE
-				@delta_interval > 0 AND @get_memory_grant_info = 1
+				@delta_interval > 0 
+			AND @get_memory_grant_info = 1
 
 		) AS x ON 
 			x.column_name LIKE token ESCAPE '|'
@@ -1362,7 +1363,6 @@ BEGIN;
 		DECLARE @last_collection_start DATETIME;
 		DECLARE @sys_info BIT;
 		SET @sys_info = ISNULL(CONVERT(BIT, SIGN(OBJECT_ID('sys.dm_os_sys_info'))), 0);
-		SET @get_memory_grant_info = ISNULL(CONVERT(BIT, SIGN(OBJECT_ID('sys.dm_exec_query_memory_grants'))), 0);
 
 		--Used for the delta pull
 		REDO:;
@@ -2075,7 +2075,7 @@ BEGIN;
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,' +
 								CASE 
-									WHEN @sql_version > 2005 THEN
+									WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
 										'MAX(mg.used_memory_kb) AS memory_usage,
 										MAX(mg.max_used_memory_kb) AS max_memory_usage,'
 									ELSE
@@ -2145,10 +2145,9 @@ BEGIN;
 								) 
 							' +
 							CASE 
-								WHEN @sql_version > 2005 THEN
-								'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
-									mg.session_id = sp2.spid
-								' 
+								WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+											'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
+											mg.session_id = sp2.spid '	
 								ELSE
 									''
 							END +
@@ -2994,45 +2993,46 @@ BEGIN;
 						COALESCE(r.logical_reads, s.logical_reads) AS reads,
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
-						COALESCE(r.CPU_time, s.CPU_time) AS CPU,' +
-						CASE 
-							WHEN @sql_version > 2005 THEN
-								'COALESCE(sp.memory_usage, 0.00) AS used_memory,
-								COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
-								COALESCE(mg.request_time,0) as request_time,
-								COALESCE(mg.grant_time,''19000101'') AS grant_time,
-								COALESCE(mg.wait_time_ms,0) as wait_time_ms,
-								COALESCE(mg.requested_memory_kb, 0.00) AS requested_memory,
-								COALESCE(mg.granted_memory_kb, 0.00) AS granted_memory,
-								COALESCE(mg.required_memory_kb, 0.00) AS required_memory,
-								COALESCE(mg.ideal_memory_kb, 0.00) AS ideal_memory,
-								COALESCE(mg.dop, 0.00) AS dop,
-								COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
-								COALESCE(mg.queue_id, 0) AS queue_id,
-								COALESCE(mg.wait_order, 0) AS wait_order,
-								COALESCE(mg.is_next_candidate, 0) AS is_next_candidate,						
-								COALESCE(rs.target_memory_kb, 0) AS target_memory_mb,
-								COALESCE(rs.max_target_memory_kb, 0) AS max_target_memory_kb,
-								COALESCE(rs.total_memory_kb, 0) AS total_memory_kb,
-								COALESCE(rs.available_memory_kb, 0) AS available_memory_kb,
-								COALESCE(rs.granted_memory_kb, 0) AS granted_memory_kb,
-								COALESCE(rs.used_memory_kb, 0) AS used_memory_kb,
-								COALESCE(rs.grantee_count, 0) AS grantee_count,
-								COALESCE(rs.waiter_count, 0) AS waiter_count,
-								COALESCE(rs.timeout_error_count, 0) AS timeout_error_count,
-								COALESCE(wg.name, ''NA'') AS wg_name,
-								COALESCE(wg.request_max_memory_grant_percent, 0) AS request_max_memory_grant_percent,
-								COALESCE(wg.request_max_cpu_time_sec, 0) AS request_max_cpu_time_sec,
-								COALESCE(wg.request_memory_grant_timeout_sec, 0) AS request_memory_grant_timeout_sec,
-								COALESCE(wg.max_dop, 0) AS max_dop,
-								COALESCE(rp.name, ''NA'') AS rp_name,
-								COALESCE(rp.min_memory_percent, 0) AS min_memory_percent,
-								COALESCE(rp.max_memory_percent, 0) AS max_memory_percent,
-								COALESCE(rp.min_cpu_percent, 0) AS min_cpu_percent,
-								COALESCE(rp.max_cpu_percent, 0) AS max_cpu_percent,'
-							ELSE 
-								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
-						END +
+						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
+						' +
+					CASE 
+						WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+						'COALESCE(sp.memory_usage, 0.00) AS used_memory,
+						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
+						COALESCE(mg.request_time, 0) as request_time,
+						COALESCE(mg.grant_time, ''19000101'') AS grant_time,
+						COALESCE(mg.wait_time_ms, 0) as wait_time_ms,
+						COALESCE(mg.requested_memory_kb, 0.00) AS requested_memory,
+						COALESCE(mg.granted_memory_kb, 0.00) AS granted_memory,
+						COALESCE(mg.required_memory_kb, 0.00) AS required_memory,
+						COALESCE(mg.ideal_memory_kb, 0.00) AS ideal_memory,
+						COALESCE(mg.dop, 0.00) AS dop,
+						COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
+						COALESCE(mg.queue_id, 0) AS queue_id,
+						COALESCE(mg.wait_order, 0) AS wait_order,
+						COALESCE(mg.is_next_candidate, 0) AS is_next_candidate,						
+						COALESCE(rs.target_memory_kb, 0) AS target_memory_mb,
+						COALESCE(rs.max_target_memory_kb, 0) AS max_target_memory_kb,
+						COALESCE(rs.total_memory_kb, 0) AS total_memory_kb,
+						COALESCE(rs.available_memory_kb, 0) AS available_memory_kb,
+						COALESCE(rs.granted_memory_kb, 0) AS granted_memory_kb,
+						COALESCE(rs.used_memory_kb, 0) AS used_memory_kb,
+						COALESCE(rs.grantee_count, 0) AS grantee_count,
+						COALESCE(rs.waiter_count, 0) AS waiter_count,
+						COALESCE(rs.timeout_error_count, 0) AS timeout_error_count,
+						COALESCE(wg.name, ''NA'') AS wg_name,
+						COALESCE(wg.request_max_memory_grant_percent, 0) AS request_max_memory_grant_percent,
+						COALESCE(wg.request_max_cpu_time_sec, 0) AS request_max_cpu_time_sec,
+						COALESCE(wg.request_memory_grant_timeout_sec, 0) AS request_memory_grant_timeout_sec,
+						COALESCE(wg.max_dop, 0) AS max_dop,
+						COALESCE(rp.name, ''NA'') AS rp_name,
+						COALESCE(rp.min_memory_percent, 0) AS min_memory_percent,
+						COALESCE(rp.max_memory_percent, 0) AS max_memory_percent,
+						COALESCE(rp.min_cpu_percent, 0) AS min_cpu_percent,
+						COALESCE(rp.max_cpu_percent, 0) AS max_cpu_percent,'
+						ELSE
+							'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
+					END +
 						'LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
@@ -3145,26 +3145,25 @@ BEGIN;
 								r.start_time = s.last_request_start_time
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
-						)' +
+						)
+						' +
 							CASE 
-								WHEN @sql_version > 2005 THEN
-								'
-							LEFT JOIN sys.dm_exec_query_stats AS qs ON
-								     r.sql_handle = qs.sql_handle
-								AND  r.plan_handle = qs.plan_handle
-								AND  r.statement_start_offset = qs.statement_start_offset
-								AND  r.statement_end_offset = qs.statement_end_offset
-							LEFT JOIN sys.dm_exec_query_memory_grants mg ON
-								     mg.session_id = sp.session_id 
-								AND  mg.request_id = sp.request_id
-							LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
-								     mg.resource_semaphore_id = rs.resource_semaphore_id 
-								AND  mg.pool_id = rs.pool_id
-							LEFT JOIN sys.resource_governor_workload_groups wg ON
-							  		 s.group_id = wg.group_id
-							LEFT JOIN sys.resource_governor_resource_pools rp ON
-									 wg.pool_id = rp.pool_id
-								' 
+								WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+										'LEFT JOIN sys.dm_exec_query_stats AS qs ON
+												 r.sql_handle = qs.sql_handle
+											AND  r.plan_handle = qs.plan_handle
+											AND  r.statement_start_offset = qs.statement_start_offset
+											AND  r.statement_end_offset = qs.statement_end_offset
+										LEFT JOIN sys.dm_exec_query_memory_grants mg ON
+												 mg.session_id = sp.session_id 
+											AND  mg.request_id = sp.request_id
+										LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
+												 mg.resource_semaphore_id = rs.resource_semaphore_id 
+											AND  mg.pool_id = rs.pool_id
+										LEFT JOIN sys.resource_governor_workload_groups wg ON
+							  						s.group_id = wg.group_id
+										LEFT JOIN sys.resource_governor_resource_pools rp ON
+													wg.pool_id = rp.pool_id'
 								ELSE
 									''
 							END + '
