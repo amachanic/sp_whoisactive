@@ -2316,568 +2316,568 @@ BEGIN;
 				ELSE 
 					''
 			END +
-			'SELECT TOP(@i)
-				@recursion AS recursion,
-				x.session_id,
-				x.request_id,
-				DENSE_RANK() OVER
+		'SELECT TOP(@i)
+			@recursion AS recursion,
+			x.session_id,
+			x.request_id,
+			DENSE_RANK() OVER
+			(
+				ORDER BY
+					x.session_id
+			) AS session_number,
+			' +
+			CASE
+				WHEN @output_column_list LIKE '%|[dd hh:mm:ss.mss|]%' ESCAPE '|' THEN 
+					'x.elapsed_time '
+				ELSE 
+					'0 '
+			END + 
+				'AS elapsed_time, 
+			' +
+		CASE
+			WHEN
 				(
-					ORDER BY
-						x.session_id
-				) AS session_number,
-				' +
-				CASE
-					WHEN @output_column_list LIKE '%|[dd hh:mm:ss.mss|]%' ESCAPE '|' THEN 
-						'x.elapsed_time '
-					ELSE 
-						'0 '
-				END + 
-					'AS elapsed_time, 
-					' +
-				CASE
-					WHEN
-						(
-							@output_column_list LIKE '%|[dd hh:mm:ss.mss (avg)|]%' ESCAPE '|' OR 
-							@output_column_list LIKE '%|[avg_elapsed_time|]%' ESCAPE '|'
-						)
-						AND @recursion = 1
-							THEN 
-								'x.avg_elapsed_time / 1000 '
-					ELSE 
-						'NULL '
-				END + 
-					'AS avg_elapsed_time, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[physical_io|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[physical_io_delta|]%' ESCAPE '|'
-							THEN 
-								'x.physical_io '
-					ELSE 
-						'NULL '
-				END + 
-					'AS physical_io, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[reads|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[reads_delta|]%' ESCAPE '|'
-							THEN 
-								'x.reads '
-					ELSE 
-						'0 '
-				END + 
-					'AS reads, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[physical_reads|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[physical_reads_delta|]%' ESCAPE '|'
-							THEN 
-								'x.physical_reads '
-					ELSE 
-						'0 '
-				END + 
-					'AS physical_reads, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[writes|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[writes_delta|]%' ESCAPE '|'
-							THEN 
-								'x.writes '
-					ELSE 
-						'0 '
-				END + 
-					'AS writes, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[tempdb_allocations|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[tempdb_allocations_delta|]%' ESCAPE '|'
-							THEN 
-								'x.tempdb_allocations '
-					ELSE 
-						'0 '
-				END + 
-					'AS tempdb_allocations, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[tempdb_current|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[tempdb_current_delta|]%' ESCAPE '|'
-							THEN 
-								'x.tempdb_current '
-					ELSE 
-						'0 '
-				END + 
-					'AS tempdb_current, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[CPU|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-							THEN
-								'x.CPU '
-					ELSE
-						'0 '
-				END + 
-					'AS CPU, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-						AND @get_task_info = 2
-						AND @sys_info = 1
-							THEN 
-								'x.thread_CPU_snapshot '
-					ELSE 
-						'0 '
-				END + 
-					'AS thread_CPU_snapshot, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[context_switches|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[context_switches_delta|]%' ESCAPE '|'
-							THEN 
-								'x.context_switches '
-					ELSE 
-						'NULL '
-				END + 
-					'AS context_switches, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[used_memory|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[used_memory_delta|]%' ESCAPE '|'
-							THEN 
-								'x.used_memory '
-					ELSE 
-						'0 '
-				END + 
-					'AS used_memory, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[max_used_memory|]%' ESCAPE '|'
-						OR @output_column_list LIKE '%|[max_used_memory_delta|]%' ESCAPE '|'
-							THEN 
-								'x.max_used_memory '
-					ELSE 
-						'0 '
-				END + 
-					'AS max_used_memory, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[requested_memory|]%' ESCAPE '|'
-							THEN 
-								'x.requested_memory '
-					ELSE 
-						'0 '
-				END + 
-					'AS requested_memory, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[granted_memory|]%' ESCAPE '|'
+					@output_column_list LIKE '%|[dd hh:mm:ss.mss (avg)|]%' ESCAPE '|' OR 
+					@output_column_list LIKE '%|[avg_elapsed_time|]%' ESCAPE '|'
+				)
+				AND @recursion = 1
+					THEN 
+						'x.avg_elapsed_time / 1000 '
+			ELSE 
+				'NULL '
+		END + 
+			'AS avg_elapsed_time, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[physical_io|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[physical_io_delta|]%' ESCAPE '|'
+					THEN 
+						'x.physical_io '
+			ELSE 
+				'NULL '
+		END + 
+			'AS physical_io, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[reads|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[reads_delta|]%' ESCAPE '|'
+					THEN 
+						'x.reads '
+			ELSE 
+				'0 '
+		END + 
+			'AS reads, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[physical_reads|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[physical_reads_delta|]%' ESCAPE '|'
+					THEN 
+						'x.physical_reads '
+			ELSE 
+				'0 '
+		END + 
+			'AS physical_reads, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[writes|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[writes_delta|]%' ESCAPE '|'
+					THEN 
+						'x.writes '
+			ELSE 
+				'0 '
+		END + 
+			'AS writes, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[tempdb_allocations|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[tempdb_allocations_delta|]%' ESCAPE '|'
+					THEN 
+						'x.tempdb_allocations '
+			ELSE 
+				'0 '
+		END + 
+			'AS tempdb_allocations, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[tempdb_current|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[tempdb_current_delta|]%' ESCAPE '|'
+					THEN 
+						'x.tempdb_current '
+			ELSE 
+				'0 '
+		END + 
+			'AS tempdb_current, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[CPU|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
+					THEN
+						'x.CPU '
+			ELSE
+				'0 '
+		END + 
+			'AS CPU, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
+				AND @get_task_info = 2
+				AND @sys_info = 1
+					THEN 
+						'x.thread_CPU_snapshot '
+			ELSE 
+				'0 '
+		END + 
+			'AS thread_CPU_snapshot, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[context_switches|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[context_switches_delta|]%' ESCAPE '|'
+					THEN 
+						'x.context_switches '
+			ELSE 
+				'NULL '
+		END + 
+			'AS context_switches, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[used_memory|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[used_memory_delta|]%' ESCAPE '|'
+					THEN 
+						'x.used_memory '
+			ELSE 
+				'0 '
+		END + 
+			'AS used_memory, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[max_used_memory|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[max_used_memory_delta|]%' ESCAPE '|'
+					THEN 
+						'x.max_used_memory '
+			ELSE 
+				'0 '
+		END + 
+			'AS max_used_memory, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[requested_memory|]%' ESCAPE '|'
+					THEN 
+						'x.requested_memory '
+			ELSE 
+				'0 '
+		END + 
+			'AS requested_memory, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[granted_memory|]%' ESCAPE '|'
 
-							THEN 
-								'x.granted_memory '
-					ELSE 
-						'0 '
-				END + 
-					'AS granted_memory, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[tasks|]%' ESCAPE '|'
-						AND @recursion = 1
-							THEN 
-								'x.tasks '
-					ELSE 
-						'NULL '
-				END + 
-					'AS tasks, 
-					' +
-				CASE
-					WHEN 
-						(
-							@output_column_list LIKE '%|[status|]%' ESCAPE '|' 
-							OR @output_column_list LIKE '%|[sql_command|]%' ESCAPE '|'
-						)
-						AND @recursion = 1
-							THEN 
-								'x.status '
-					ELSE 
-						''''' '
-				END + 
-					'AS status, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[wait_info|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								CASE @get_task_info
-									WHEN 2 THEN
-										'COALESCE(x.task_wait_info, x.sys_wait_info) '
+					THEN 
+						'x.granted_memory '
+			ELSE 
+				'0 '
+		END + 
+			'AS granted_memory, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[tasks|]%' ESCAPE '|'
+				AND @recursion = 1
+					THEN 
+						'x.tasks '
+			ELSE 
+				'NULL '
+		END + 
+			'AS tasks, 
+			' +
+		CASE
+			WHEN 
+				(
+					@output_column_list LIKE '%|[status|]%' ESCAPE '|' 
+					OR @output_column_list LIKE '%|[sql_command|]%' ESCAPE '|'
+				)
+				AND @recursion = 1
+					THEN 
+						'x.status '
+			ELSE 
+				''''' '
+		END + 
+			'AS status, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[wait_info|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						CASE @get_task_info
+							WHEN 2 THEN
+								'COALESCE(x.task_wait_info, x.sys_wait_info) '
+							ELSE
+								'x.sys_wait_info '
+						END
+			ELSE 
+				'NULL '
+		END + 
+			'AS wait_info, 
+			' +
+		CASE
+			WHEN 
+				(
+					@output_column_list LIKE '%|[tran_start_time|]%' ESCAPE '|' 
+					OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|' 
+				)
+				AND @recursion = 1
+					THEN 
+						'x.transaction_id '
+			ELSE 
+				'NULL '
+		END + 
+			'AS transaction_id, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[open_tran_count|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'x.open_tran_count '
+			ELSE 
+				'NULL '
+		END + 
+			'AS open_tran_count, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'x.sql_handle '
+			ELSE 
+				'NULL '
+		END + 
+			'AS sql_handle, 
+			' +
+		CASE
+			WHEN 
+				(
+					@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
+					OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
+				)
+				AND @recursion = 1
+					THEN 
+						'x.statement_start_offset '
+			ELSE 
+				'NULL '
+		END + 
+			'AS statement_start_offset, 
+			' +
+		CASE
+			WHEN 
+				(
+					@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
+					OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
+				)
+				AND @recursion = 1
+					THEN 
+						'x.statement_end_offset '
+			ELSE 
+				'NULL '
+		END + 
+			'AS statement_end_offset, 
+			' +
+		'NULL AS sql_text, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'x.plan_handle '
+			ELSE 
+				'NULL '
+		END + 
+			'AS plan_handle, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[blocking_session_id|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'NULLIF(x.blocking_session_id, 0) '
+			ELSE 
+				'NULL '
+		END + 
+			'AS blocking_session_id, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[percent_complete|]%' ESCAPE '|'
+				AND @recursion = 1
+					THEN 
+						'x.percent_complete '
+			ELSE 
+				'NULL '
+		END + 
+			'AS percent_complete, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[host_name|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'x.host_name '
+			ELSE 
+				''''' '
+		END + 
+			'AS host_name, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[login_name|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'x.login_name '
+			ELSE 
+				''''' '
+		END + 
+			'AS login_name, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[database_name|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'DB_NAME(x.database_id) '
+			ELSE 
+				'NULL '
+		END + 
+			'AS database_name, 
+			' +
+		CASE
+			WHEN 
+				@output_column_list LIKE '%|[program_name|]%' ESCAPE '|' 
+				AND @recursion = 1
+					THEN 
+						'x.program_name '
+			ELSE 
+				''''' '
+		END + 
+			'AS program_name, 
+			' +
+		CASE
+			WHEN
+				@output_column_list LIKE '%|[additional_info|]%' ESCAPE '|'
+				AND @recursion = 1
+					THEN
+						'(
+							SELECT TOP(@i)
+								x.text_size,
+								x.language,
+								x.date_format,
+								x.date_first,
+								CASE x.quoted_identifier
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS quoted_identifier,
+								CASE x.arithabort
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS arithabort,
+								CASE x.ansi_null_dflt_on
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS ansi_null_dflt_on,
+								CASE x.ansi_defaults
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS ansi_defaults,
+								CASE x.ansi_warnings
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS ansi_warnings,
+								CASE x.ansi_padding
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS ansi_padding,
+								CASE ansi_nulls
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS ansi_nulls,
+								CASE x.concat_null_yields_null
+									WHEN 0 THEN ''OFF''
+									WHEN 1 THEN ''ON''
+								END AS concat_null_yields_null,
+								CASE x.transaction_isolation_level
+									WHEN 0 THEN ''Unspecified''
+									WHEN 1 THEN ''ReadUncomitted''
+									WHEN 2 THEN ''ReadCommitted''
+									WHEN 3 THEN ''Repeatable''
+									WHEN 4 THEN ''Serializable''
+									WHEN 5 THEN ''Snapshot''
+								END AS transaction_isolation_level,
+								x.lock_timeout,
+								x.deadlock_priority,
+								x.row_count,
+								x.command_type, 
+								' +
+								CASE
+									WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
+										'master.dbo.fn_varbintohexstr(x.sql_handle) AS sql_handle,
+										master.dbo.fn_varbintohexstr(x.plan_handle) AS plan_handle,'
 									ELSE
-										'x.sys_wait_info '
-								END
-					ELSE 
-						'NULL '
-				END + 
-					'AS wait_info, 
-					' +
-				CASE
-					WHEN 
-						(
-							@output_column_list LIKE '%|[tran_start_time|]%' ESCAPE '|' 
-							OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|' 
-						)
-						AND @recursion = 1
-							THEN 
-								'x.transaction_id '
-					ELSE 
-						'NULL '
-				END + 
-					'AS transaction_id, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[open_tran_count|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'x.open_tran_count '
-					ELSE 
-						'NULL '
-				END + 
-					'AS open_tran_count, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'x.sql_handle '
-					ELSE 
-						'NULL '
-				END + 
-					'AS sql_handle, 
-					' +
-				CASE
-					WHEN 
-						(
-							@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
-							OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
-						)
-						AND @recursion = 1
-							THEN 
-								'x.statement_start_offset '
-					ELSE 
-						'NULL '
-				END + 
-					'AS statement_start_offset, 
-					' +
-				CASE
-					WHEN 
-						(
-							@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
-							OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
-						)
-						AND @recursion = 1
-							THEN 
-								'x.statement_end_offset '
-					ELSE 
-						'NULL '
-				END + 
-					'AS statement_end_offset, 
-					' +
-				'NULL AS sql_text, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'x.plan_handle '
-					ELSE 
-						'NULL '
-				END + 
-					'AS plan_handle, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[blocking_session_id|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'NULLIF(x.blocking_session_id, 0) '
-					ELSE 
-						'NULL '
-				END + 
-					'AS blocking_session_id, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[percent_complete|]%' ESCAPE '|'
-						AND @recursion = 1
-							THEN 
-								'x.percent_complete '
-					ELSE 
-						'NULL '
-				END + 
-					'AS percent_complete, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[host_name|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'x.host_name '
-					ELSE 
-						''''' '
-				END + 
-					'AS host_name, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[login_name|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'x.login_name '
-					ELSE 
-						''''' '
-				END + 
-					'AS login_name, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[database_name|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'DB_NAME(x.database_id) '
-					ELSE 
-						'NULL '
-				END + 
-					'AS database_name, 
-					' +
-				CASE
-					WHEN 
-						@output_column_list LIKE '%|[program_name|]%' ESCAPE '|' 
-						AND @recursion = 1
-							THEN 
-								'x.program_name '
-					ELSE 
-						''''' '
-				END + 
-					'AS program_name, 
-					' +
-				CASE
-					WHEN
-						@output_column_list LIKE '%|[additional_info|]%' ESCAPE '|'
-						AND @recursion = 1
-							THEN
-								'(
-									SELECT TOP(@i)
-										x.text_size,
-										x.language,
-										x.date_format,
-										x.date_first,
-										CASE x.quoted_identifier
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS quoted_identifier,
-										CASE x.arithabort
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS arithabort,
-										CASE x.ansi_null_dflt_on
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS ansi_null_dflt_on,
-										CASE x.ansi_defaults
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS ansi_defaults,
-										CASE x.ansi_warnings
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS ansi_warnings,
-										CASE x.ansi_padding
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS ansi_padding,
-										CASE ansi_nulls
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS ansi_nulls,
-										CASE x.concat_null_yields_null
-											WHEN 0 THEN ''OFF''
-											WHEN 1 THEN ''ON''
-										END AS concat_null_yields_null,
-										CASE x.transaction_isolation_level
-											WHEN 0 THEN ''Unspecified''
-											WHEN 1 THEN ''ReadUncomitted''
-											WHEN 2 THEN ''ReadCommitted''
-											WHEN 3 THEN ''Repeatable''
-											WHEN 4 THEN ''Serializable''
-											WHEN 5 THEN ''Snapshot''
-										END AS transaction_isolation_level,
-										x.lock_timeout,
-										x.deadlock_priority,
-										x.row_count,
-										x.command_type, 
-										' +
-										CASE
-											WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
-												'master.dbo.fn_varbintohexstr(x.sql_handle) AS sql_handle,
-												master.dbo.fn_varbintohexstr(x.plan_handle) AS plan_handle,'
-											ELSE
-												'CONVERT(VARCHAR(256), x.sql_handle, 1) AS sql_handle,
-												CONVERT(VARCHAR(256), x.plan_handle, 1) AS plan_handle,'
-										END +									  
-										'
-										x.statement_start_offset,
-										x.statement_end_offset,
-										' +
-										CASE
-											WHEN @output_column_list LIKE '%|[program_name|]%' ESCAPE '|' THEN
-												'(
+										'CONVERT(VARCHAR(256), x.sql_handle, 1) AS sql_handle,
+										CONVERT(VARCHAR(256), x.plan_handle, 1) AS plan_handle,'
+								END +									  
+								'
+								x.statement_start_offset,
+								x.statement_end_offset,
+								' +
+								CASE
+									WHEN @output_column_list LIKE '%|[program_name|]%' ESCAPE '|' THEN
+										'(
+											SELECT TOP(1)
+												CONVERT(uniqueidentifier, CONVERT(XML, '''').value(''xs:hexBinary( substring(sql:column("agent_info.job_id_string"), 0) )'', ''binary(16)'')) AS job_id,
+												agent_info.step_id,
+												(
 													SELECT TOP(1)
-														CONVERT(uniqueidentifier, CONVERT(XML, '''').value(''xs:hexBinary( substring(sql:column("agent_info.job_id_string"), 0) )'', ''binary(16)'')) AS job_id,
-														agent_info.step_id,
-														(
-															SELECT TOP(1)
-																NULL
-															FOR XML
-																PATH(''job_name''),
-																TYPE
-														),
-														(
-															SELECT TOP(1)
-																NULL
-															FOR XML
-																PATH(''step_name''),
-																TYPE
-														)
-													FROM
-													(
-														SELECT TOP(1)
-															SUBSTRING(x.program_name, CHARINDEX(''0x'', x.program_name) + 2, 32) AS job_id_string,
-															SUBSTRING(x.program_name, CHARINDEX('': Step '', x.program_name) + 7, CHARINDEX('')'', x.program_name, CHARINDEX('': Step '', x.program_name)) - (CHARINDEX('': Step '', x.program_name) + 7)) AS step_id
-														WHERE
-															x.program_name LIKE N''SQLAgent - TSQL JobStep (Job 0x%''
-													) AS agent_info
+														NULL
 													FOR XML
-														PATH(''agent_job_info''),
+														PATH(''job_name''),
 														TYPE
 												),
-												'
-											ELSE ''
-										END +
-										CASE
-											WHEN @get_task_info = 2 THEN
-												'CONVERT(XML, x.block_info) AS block_info, 
-												'
-											ELSE
-												''
-										END + '
+												(
+													SELECT TOP(1)
+														NULL
+													FOR XML
+														PATH(''step_name''),
+														TYPE
+												)
+											FROM
+											(
+												SELECT TOP(1)
+													SUBSTRING(x.program_name, CHARINDEX(''0x'', x.program_name) + 2, 32) AS job_id_string,
+													SUBSTRING(x.program_name, CHARINDEX('': Step '', x.program_name) + 7, CHARINDEX('')'', x.program_name, CHARINDEX('': Step '', x.program_name)) - (CHARINDEX('': Step '', x.program_name) + 7)) AS step_id
+												WHERE
+													x.program_name LIKE N''SQLAgent - TSQL JobStep (Job 0x%''
+											) AS agent_info
+											FOR XML
+												PATH(''agent_job_info''),
+												TYPE
+										),
+										'
+									ELSE ''
+								END +
+								CASE
+									WHEN @get_task_info = 2 THEN
+										'CONVERT(XML, x.block_info) AS block_info, 
+										'
+									ELSE
+										''
+								END + '
 										
-										x.host_process_id,
-										x.group_id
-									FOR XML
-										PATH(''additional_info''),
-										TYPE
-								) '
-					ELSE
-						'NULL '
-				END + 
-					'AS additional_info, ' +
-				CASE
-					WHEN
-						@output_column_list LIKE '%|[memory_grant_info|]%' ESCAPE '|'
-						AND @get_memory_grant_info = 1 THEN
-				'
-								(
-									SELECT TOP(@i)
-										(SELECT TOP(@i)	 
-											x.request_time,
-											x.grant_time,
-											x.wait_time_ms,
-											x.requested_memory AS requested_memory_kb,	
-											x.granted_memory AS granted_memory_kb,
-											x.used_memory AS used_memory_kb,	
-											x.max_used_memory AS max_used_memory_kb,
-											x.ideal_memory AS ideal_memory_kb,	
-											x.required_memory AS required_memory_kb,
-											x.queue_id AS queue_id,
-											x.wait_order AS wait_order,
-											x.is_next_candidate AS is_next_candidate,
-											x.dop,
-											CAST(x.query_subtree_cost AS NUMERIC(13,4)) AS query_subtree_cost
-										FOR XML 
-										PATH(''query_memory_grants''), 
-										TYPE
-										),
-										(SELECT TOP(@i)
-											x.timeout_error_count,
-											x.target_memory_mb,
-											x.max_target_memory_kb,
-											x.total_memory_kb,
-											x.available_memory_kb,
-											x.granted_memory_kb,
-											x.used_memory_kb,
-											x.grantee_count,
-											x.waiter_count
-										FOR XML 
-										PATH(''query_resource_semaphores''), 
-										TYPE
-										),
-										(SELECT TOP(@i)	
-											x.wg_name AS name,
-											x.request_max_memory_grant_percent,
-											x.request_max_cpu_time_sec,
-											x.request_memory_grant_timeout_sec,
-											x.max_dop
-										FOR XML 
-										PATH(''resource_governor_workload_groups''), 
-										TYPE
-										),
-										(SELECT TOP(@i)	
-											x.rp_name AS name,
-											x.min_memory_percent,
-											x.max_memory_percent,
-											x.min_cpu_percent,
-											x.max_cpu_percent
-										FOR XML 
-										PATH(''resource_governor_resource_pools''), 
-										TYPE
-										)
-									FOR XML 
-										PATH(''memory_counters''), 
-										TYPE
-								)				
-								'
-					ELSE 
+								x.host_process_id,
+								x.group_id
+							FOR XML
+								PATH(''additional_info''),
+								TYPE
+						) '
+			ELSE
 				'NULL '
-				END + 
-					'AS memory_grant_info, ' +  
-					'x.start_time, 
-					' +
-				CASE
-					WHEN
-						@output_column_list LIKE '%|[login_time|]%' ESCAPE '|'
-						AND @recursion = 1
-							THEN
-								'x.login_time '
-					ELSE 
-						'NULL '
-				END + 
-					'AS login_time, 
-				x.last_request_start_time
+		END + 
+			'AS additional_info, ' 
+	+
+	CASE
+		WHEN
+			@output_column_list LIKE '%|[memory_grant_info|]%' ESCAPE '|'
+			AND @get_memory_grant_info = 1 THEN'
+			(
+				SELECT TOP(@i)
+					(SELECT TOP(@i)	 
+						x.request_time,
+						x.grant_time,
+						x.wait_time_ms,
+						x.requested_memory AS requested_memory_kb,	
+						x.granted_memory AS granted_memory_kb,
+						x.used_memory AS used_memory_kb,	
+						x.max_used_memory AS max_used_memory_kb,
+						x.ideal_memory AS ideal_memory_kb,	
+						x.required_memory AS required_memory_kb,
+						x.queue_id AS queue_id,
+						x.wait_order AS wait_order,
+						x.is_next_candidate AS is_next_candidate,
+						x.dop,
+						CAST(x.query_subtree_cost AS NUMERIC(13,4)) AS query_subtree_cost
+					FOR XML 
+					PATH(''query_memory_grants''), 
+					TYPE
+					),
+					(SELECT TOP(@i)
+						x.timeout_error_count,
+						x.target_memory_mb,
+						x.max_target_memory_kb,
+						x.total_memory_kb,
+						x.available_memory_kb,
+						x.granted_memory_kb,
+						x.used_memory_kb,
+						x.grantee_count,
+						x.waiter_count
+					FOR XML 
+					PATH(''query_resource_semaphores''), 
+					TYPE
+					),
+					(SELECT TOP(@i)	
+						x.wg_name AS name,
+						x.request_max_memory_grant_percent,
+						x.request_max_cpu_time_sec,
+						x.request_memory_grant_timeout_sec,
+						x.max_dop
+					FOR XML 
+					PATH(''resource_governor_workload_groups''), 
+					TYPE
+					),
+					(SELECT TOP(@i)	
+						x.rp_name AS name,
+						x.min_memory_percent,
+						x.max_memory_percent,
+						x.min_cpu_percent,
+						x.max_cpu_percent
+					FOR XML 
+					PATH(''resource_governor_resource_pools''), 
+					TYPE
+					)
+				FOR XML 
+					PATH(''memory_counters''), 
+					TYPE
+			)				
+			'
+			ELSE 
+		'NULL '
+		END + 
+			'AS memory_grant_info, ' +  
+			'x.start_time, 
+			' +
+		CASE
+			WHEN
+				@output_column_list LIKE '%|[login_time|]%' ESCAPE '|'
+				AND @recursion = 1
+					THEN
+						'x.login_time '
+			ELSE 
+				'NULL '
+		END + 
+			'AS login_time, 
+			x.last_request_start_time
 			FROM
 			(
 				SELECT TOP(@i)
@@ -3038,19 +3038,18 @@ BEGIN;
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
 						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
 						' +
-						CASE
-							WHEN 
-							(
-								@get_task_info <> 0
-								OR @find_block_leaders = 1 
-							) THEN
-								'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
-								sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
-								sp.wait_time AS wait_duration_ms, 
-								'
-							ELSE
+					CASE
+						WHEN 
+						(
+							@get_task_info <> 0
+							OR @find_block_leaders = 1 
+						) THEN
+						'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
+						sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
+						sp.wait_time AS wait_duration_ms,'
+						ELSE
 								''
-						END +
+					END +
 						'NULLIF(sp.blocked, 0) AS blocking_session_id,
 						r.plan_handle,
 						NULLIF(r.percent_complete, 0) AS percent_complete,
@@ -3145,34 +3144,35 @@ BEGIN;
 								r.start_time = s.last_request_start_time
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
-						)
-						' +
-							CASE 
-								WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
-										'LEFT JOIN sys.dm_exec_query_stats AS qs ON
-												 r.sql_handle = qs.sql_handle
-											AND  r.plan_handle = qs.plan_handle
-											AND  r.statement_start_offset = qs.statement_start_offset
-											AND  r.statement_end_offset = qs.statement_end_offset
-										LEFT JOIN sys.dm_exec_query_memory_grants mg ON
-												 mg.session_id = sp.session_id 
-											AND  mg.request_id = sp.request_id
-										LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
-												 mg.resource_semaphore_id = rs.resource_semaphore_id 
-											AND  mg.pool_id = rs.pool_id
-										LEFT JOIN sys.resource_governor_workload_groups wg ON
-							  						s.group_id = wg.group_id
-										LEFT JOIN sys.resource_governor_resource_pools rp ON
-													wg.pool_id = rp.pool_id'
-								ELSE
-									''
-							END + '
+					)
+				' +
+			CASE 
+				WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+'
+					LEFT JOIN sys.dm_exec_query_stats AS qs ON
+							 r.sql_handle = qs.sql_handle
+						AND  r.plan_handle = qs.plan_handle
+						AND  r.statement_start_offset = qs.statement_start_offset
+						AND  r.statement_end_offset = qs.statement_end_offset
+					LEFT JOIN sys.dm_exec_query_memory_grants mg ON
+							 mg.session_id = sp.session_id 
+						AND  mg.request_id = sp.request_id
+					LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
+							 mg.resource_semaphore_id = rs.resource_semaphore_id 
+						AND  mg.pool_id = rs.pool_id
+					LEFT JOIN sys.resource_governor_workload_groups wg ON
+							  	s.group_id = wg.group_id
+					LEFT JOIN sys.resource_governor_resource_pools rp ON
+								wg.pool_id = rp.pool_id'
+				ELSE
+					''
+			END + '
 				) AS y
-				' + 
+					' + 
 				CASE 
 					WHEN @get_task_info = 2 THEN
-						CONVERT(VARCHAR(MAX), '') +
-						'LEFT OUTER HASH JOIN
+						CONVERT(VARCHAR(MAX), '') 
+						+'LEFT OUTER HASH JOIN
 						(
 							SELECT TOP(@i)
 								task_nodes.task_node.value(''(session_id/text())[1]'', ''SMALLINT'') AS session_id,
