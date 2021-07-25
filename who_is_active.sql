@@ -485,13 +485,13 @@ BEGIN;
 		RETURN;
 	END;
 
-	IF @sql_version =-1
+	IF @sql_version = -1
 	BEGIN;
 		RAISERROR('Sorry, you have an unsupported SQL Server Version', 16, 1);
 		RETURN;
 	END;
 
-	IF @sql_version <2008 and @get_memory_grant_info=1
+	IF @sql_version < 2008 and @get_memory_grant_info = 1
 	BEGIN;
 		RAISERROR('Sorry, advanced memory options are not available on your SQL Server Version', 16, 1);
 		RETURN;
@@ -2075,7 +2075,7 @@ BEGIN;
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,' +
 								CASE 
-									WHEN @sql_version>2005 THEN
+									WHEN @sql_version > 2005 THEN
 										'MAX(mg.used_memory_kb) AS memory_usage,
 										MAX(mg.max_used_memory_kb) AS max_memory_usage,'
 									ELSE
@@ -2145,8 +2145,7 @@ BEGIN;
 								) 
 							' +
 							CASE 
-								WHEN @sql_version>2005 THEN
-
+								WHEN @sql_version > 2005 THEN
 								'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
 									mg.session_id = sp2.spid
 								' 
@@ -2997,7 +2996,7 @@ BEGIN;
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,' +
 						CASE 
-							WHEN @sql_version>2005 THEN
+							WHEN @sql_version > 2005 THEN
 								'COALESCE(sp.memory_usage, 0.00) AS used_memory,
 								COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
 								COALESCE(mg.request_time,0) as request_time,
@@ -3148,7 +3147,7 @@ BEGIN;
 							)
 						)' +
 							CASE 
-								WHEN @sql_version>2005 THEN
+								WHEN @sql_version > 2005 THEN
 								'
 							LEFT JOIN sys.dm_exec_query_stats AS qs ON
 								     r.sql_handle = qs.sql_handle
