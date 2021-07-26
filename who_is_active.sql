@@ -2150,7 +2150,9 @@ BEGIN;
 							CASE 
 								WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
 											'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
-											mg.session_id = sp2.spid '	
+												mg.session_id = sp2.spid 
+											AND	mg.request_id = sp2.request_id
+											'	
 								ELSE
 									''
 							END +
