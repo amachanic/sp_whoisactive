@@ -1073,7 +1073,7 @@ BEGIN;
 			WHERE
 				@get_memory_grant_info = 1
 			UNION ALL
-			SELECT '[max_used_memory_delta]', 22
+			SELECT '[max_used_memory_delta]', 23
 			WHERE
 				@delta_interval > 0 
 			AND @get_memory_grant_info = 1
@@ -2898,7 +2898,8 @@ BEGIN;
 							ELSE tempdb_info.tempdb_current
 						END,
 						0
-			) AS tempdb_current, '
+			) AS tempdb_current, 
+			'
 			+
 				CASE
 					WHEN 
@@ -3146,7 +3147,7 @@ BEGIN;
 								r.start_time = s.last_request_start_time
 								AND s.last_request_end_time <= sp.last_request_end_time
 							)
-					)
+						)
 				' +
 			CASE 
 				WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
