@@ -1829,14 +1829,16 @@ BEGIN;
 						@get_task_info <> 0 
 						OR @find_block_leaders = 1 
 					) THEN
-						'wait_type NVARCHAR(32),
+						'
+						wait_type NVARCHAR(32),
 						wait_resource NVARCHAR(256),
 						wait_time BIGINT, 
 						'
 					ELSE 
 						''
 				END +
-				'blocked SMALLINT,
+				'
+				blocked SMALLINT,
 				is_user_process BIT,
 				cmd VARCHAR(32),
 				PRIMARY KEY CLUSTERED (session_id, request_id) WITH (IGNORE_DUP_KEY = ON)
@@ -1912,7 +1914,7 @@ BEGIN;
 							WHEN
 								spy.wait_type LIKE N''PAGE%LATCH_%''
 								OR spy.wait_type = N''CXPACKET''
-								OR spy.wait_type = N''CXCONSUMER''
+								--OR spy.wait_type = N''CXCONSUMER''
 								OR spy.wait_type LIKE N''LATCH[_]%''
 								OR spy.wait_type = N''OLEDB'' THEN
 									spy.wait_resource
@@ -1994,19 +1996,19 @@ BEGIN;
 								OR @find_block_leaders = 1 
 							) THEN
 								'CASE
-									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'') THEN
+									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'') THEN
 										sp0.wait_type
 									ELSE
 										NULL
 								END AS wait_type,
 								CASE
-									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'') THEN 
+									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'') THEN 
 										sp0.wait_resource
 									ELSE
 										NULL
 								END AS wait_resource,
 								CASE
-									WHEN sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'') THEN
+									WHEN sp0.wait_type NOT IN (N''CXPACKET'') THEN
 										sp0.wait_time
 									ELSE
 										0
@@ -2603,7 +2605,8 @@ BEGIN;
 			'AS statement_end_offset, 
 			' +
 		'NULL AS sql_text, 
-			' +
+			' 
+			+
 		CASE
 			WHEN 
 				@output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
@@ -3450,16 +3453,9 @@ BEGIN;
 																				N''*''
 																		END +
 																	N'')''
+
 																WHEN wt.wait_type = N''CXPACKET'' THEN
-																	N'':'' + SUBSTRING(wt.resource_description, 
-																					   CHARINDEX(N''nodeId'', wt.resource_description) + 7, 
-																					   CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7)
-																					   - 7 - CHARINDEX(N''nodeId'', wt.resource_description))
-																WHEN wt.wait_type = N''CXCONSUMER'' THEN
-																	N'':'' + SUBSTRING(wt.resource_description, 
-																					   CHARINDEX(N''nodeId'', wt.resource_description) + 7, 
-																					   CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7)
-																					   - 7 - CHARINDEX(N''nodeId'', wt.resource_description))
+																	N'':'' + SUBSTRING(wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7, 4)
 																WHEN wt.wait_type LIKE N''LATCH[_]%'' THEN
 																	N'' ['' + LEFT(wt.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', wt.resource_description), 0), LEN(wt.resource_description) + 1) - 1) + N'']''
 																ELSE 
