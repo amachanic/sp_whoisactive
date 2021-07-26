@@ -2152,9 +2152,9 @@ BEGIN;
 							' +
 							CASE 
 								WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
-											'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
-												mg.session_id = sp2.spid 
-											AND	mg.request_id = sp2.request_id
+										'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
+											mg.session_id = sp2.spid 
+										AND	mg.request_id = sp2.request_id
 											'	
 								ELSE
 									''
@@ -2871,10 +2871,10 @@ BEGIN;
 			)				
 			'
 			ELSE 
-		'NULL '
+				'NULL '
 		END + 
-			'AS memory_grant_info, ' +  
-			'x.start_time, 
+			'AS memory_grant_info,  
+			x.start_time, 
 			' +
 		CASE
 			WHEN
@@ -2904,16 +2904,14 @@ BEGIN;
 							ELSE tempdb_info.tempdb_current
 						END,
 						0
-			) AS tempdb_current, 
-			'
-			+
-				CASE
-					WHEN 
-						(
-							@get_task_info <> 0
-							OR @find_block_leaders = 1
-						) THEN
-					'N''('' + CONVERT(NVARCHAR, y.wait_duration_ms) + N''ms)'' + y.wait_type +
+			) AS tempdb_current, '+
+		CASE
+			WHEN 
+				(
+					@get_task_info <> 0
+					OR @find_block_leaders = 1
+				) THEN
+			'N''('' + CONVERT(NVARCHAR, y.wait_duration_ms) + N''ms)'' + y.wait_type +
 					CASE
 						WHEN y.wait_type LIKE N''PAGE%LATCH_%'' THEN
 							N'':'' +
@@ -2950,238 +2948,238 @@ BEGIN;
 								ELSE 
 									N''*''
 							END +
-							N'')''
-						WHEN y.wait_type = N''CXPACKET'' THEN
-							N'':'' + SUBSTRING(y.resource_description, 
-							CHARINDEX(N''nodeId'', y.resource_description) + 7, 
-							CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
-							- 7 - CHARINDEX(N''nodeId'', y.resource_description))
-						WHEN y.wait_type = N''CXCONSUMER'' THEN
-							N'':'' + SUBSTRING(y.resource_description, 
-							CHARINDEX(N''nodeId'', y.resource_description) + 7, 
-							CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
-							- 7 - CHARINDEX(N''nodeId'', y.resource_description))
-						WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
-							N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
-						WHEN
-							y.wait_type = N''OLEDB''
-							AND y.resource_description LIKE N''%(SPID=%)'' THEN
-							N''['' + LEFT(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) - 2) +
-							N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) + 6, CHARINDEX(N'')'', y.resource_description, (CHARINDEX(N''(SPID='', y.resource_description) + 6)) - (CHARINDEX(N''(SPID='', y.resource_description) + 6)) + '']''
-						ELSE
-							N''''
-					END COLLATE Latin1_General_Bin2 AS sys_wait_info,
-					'
+						N'')''
+					WHEN y.wait_type = N''CXPACKET'' THEN
+						N'':'' + SUBSTRING(y.resource_description, 
+						CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+						CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
+						- 7 - CHARINDEX(N''nodeId'', y.resource_description))
+					WHEN y.wait_type = N''CXCONSUMER'' THEN
+						N'':'' + SUBSTRING(y.resource_description, 
+						CHARINDEX(N''nodeId'', y.resource_description) + 7, 
+						CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7)
+						- 7 - CHARINDEX(N''nodeId'', y.resource_description))
+					WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
+						N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
+					WHEN
+						y.wait_type = N''OLEDB''
+						AND y.resource_description LIKE N''%(SPID=%)'' THEN
+						N''['' + LEFT(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) - 2) +
+						N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) + 6, CHARINDEX(N'')'', y.resource_description, (CHARINDEX(N''(SPID='', y.resource_description) + 6)) - (CHARINDEX(N''(SPID='', y.resource_description) + 6)) + '']''
 					ELSE
-						''
-				END +
-				CASE
-					WHEN @get_task_info = 2 THEN
-						'tasks.physical_io,
-						tasks.context_switches,
-						tasks.tasks,
-						tasks.block_info,
-						tasks.wait_info AS task_wait_info,
-						tasks.thread_CPU_snapshot,
-						'
-					ELSE
-						''
-					END+
-				CASE 
-					WHEN NOT (@get_avg_time = 1 AND @recursion = 1) THEN
-						'CONVERT(INT, NULL) '
-					ELSE 
-						'qs.total_elapsed_time / qs.execution_count'
-				END +'
-				AS avg_elapsed_time 
-				FROM
-				(
-					SELECT TOP(@i)
-						sp.session_id,
-						sp.request_id,
-						COALESCE(r.logical_reads, s.logical_reads) AS reads,
-						COALESCE(r.reads, s.reads) AS physical_reads,
-						COALESCE(r.writes, s.writes) AS writes,
-						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
-						' +
-					CASE 
-						WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
-						'COALESCE(sp.memory_usage, 0.00) AS used_memory,
-						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
-						COALESCE(mg.request_time, 0) as request_time,
-						COALESCE(mg.grant_time, ''19000101'') AS grant_time,
-						COALESCE(mg.wait_time_ms, 0) as wait_time_ms,
-						COALESCE(mg.requested_memory_kb, 0.00) AS requested_memory,
-						COALESCE(mg.granted_memory_kb, 0.00) AS granted_memory,
-						COALESCE(mg.required_memory_kb, 0.00) AS required_memory,
-						COALESCE(mg.ideal_memory_kb, 0.00) AS ideal_memory,
-						COALESCE(mg.dop, 0.00) AS dop,
-						COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
-						COALESCE(mg.queue_id, 0) AS queue_id,
-						COALESCE(mg.wait_order, 0) AS wait_order,
-						COALESCE(mg.is_next_candidate, 0) AS is_next_candidate,						
-						COALESCE(rs.target_memory_kb, 0) AS target_memory_mb,
-						COALESCE(rs.max_target_memory_kb, 0) AS max_target_memory_kb,
-						COALESCE(rs.total_memory_kb, 0) AS total_memory_kb,
-						COALESCE(rs.available_memory_kb, 0) AS available_memory_kb,
-						COALESCE(rs.granted_memory_kb, 0) AS granted_memory_kb,
-						COALESCE(rs.used_memory_kb, 0) AS used_memory_kb,
-						COALESCE(rs.grantee_count, 0) AS grantee_count,
-						COALESCE(rs.waiter_count, 0) AS waiter_count,
-						COALESCE(rs.timeout_error_count, 0) AS timeout_error_count,
-						COALESCE(wg.name, ''NA'') AS wg_name,
-						COALESCE(wg.request_max_memory_grant_percent, 0) AS request_max_memory_grant_percent,
-						COALESCE(wg.request_max_cpu_time_sec, 0) AS request_max_cpu_time_sec,
-						COALESCE(wg.request_memory_grant_timeout_sec, 0) AS request_memory_grant_timeout_sec,
-						COALESCE(wg.max_dop, 0) AS max_dop,
-						COALESCE(rp.name, ''NA'') AS rp_name,
-						COALESCE(rp.min_memory_percent, 0) AS min_memory_percent,
-						COALESCE(rp.max_memory_percent, 0) AS max_memory_percent,
-						COALESCE(rp.min_cpu_percent, 0) AS min_cpu_percent,
-						COALESCE(rp.max_cpu_percent, 0) AS max_cpu_percent,'
-						ELSE
-							'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
-					END +
-						'LOWER(sp.status) AS status,
-						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
-						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
-						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
-						' +
-					CASE
-						WHEN 
-						(
-							@get_task_info <> 0
-							OR @find_block_leaders = 1 
-						) THEN
-						'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
-						sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
-						sp.wait_time AS wait_duration_ms,'
-						ELSE
-								''
-					END +
-						'NULLIF(sp.blocked, 0) AS blocking_session_id,
-						r.plan_handle,
-						NULLIF(r.percent_complete, 0) AS percent_complete,
-						sp.host_name,
-						sp.login_name,
-						sp.program_name,
-						s.host_process_id,
-						COALESCE(r.text_size, s.text_size) AS text_size,
-						COALESCE(r.language, s.language) AS language,
-						COALESCE(r.date_format, s.date_format) AS date_format,
-						COALESCE(r.date_first, s.date_first) AS date_first,
-						COALESCE(r.quoted_identifier, s.quoted_identifier) AS quoted_identifier,
-						COALESCE(r.arithabort, s.arithabort) AS arithabort,
-						COALESCE(r.ansi_null_dflt_on, s.ansi_null_dflt_on) AS ansi_null_dflt_on,
-						COALESCE(r.ansi_defaults, s.ansi_defaults) AS ansi_defaults,
-						COALESCE(r.ansi_warnings, s.ansi_warnings) AS ansi_warnings,
-						COALESCE(r.ansi_padding, s.ansi_padding) AS ansi_padding,
-						COALESCE(r.ansi_nulls, s.ansi_nulls) AS ansi_nulls,
-						COALESCE(r.concat_null_yields_null, s.concat_null_yields_null) AS concat_null_yields_null,
-						COALESCE(r.transaction_isolation_level, s.transaction_isolation_level) AS transaction_isolation_level,
-						COALESCE(r.lock_timeout, s.lock_timeout) AS lock_timeout,
-						COALESCE(r.deadlock_priority, s.deadlock_priority) AS deadlock_priority,
-						COALESCE(r.row_count, s.row_count) AS row_count,
-						COALESCE(r.command, sp.cmd) AS command_type,
-						COALESCE
-						(
-							CASE
-								WHEN
-								(
-									s.is_user_process = 0
-									AND r.total_elapsed_time >= 0
-								) THEN
-									DATEADD
-									(
-										ms,
-										1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())),
-										DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
-									)
-							END,
-							NULLIF(COALESCE(r.start_time, sp.last_request_end_time), CONVERT(DATETIME, ''19000101'', 112)),
-							sp.login_time
-						) AS start_time,
-						sp.login_time,
-						CASE
-							WHEN s.is_user_process = 1 THEN
-								s.last_request_start_time
-							ELSE
-								COALESCE
-								(
-									DATEADD
-									(
-										ms,
-										1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())),
-										DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
-									),
-									s.last_request_start_time
-								)
-						END AS last_request_start_time,
-						r.transaction_id,
-						sp.database_id,
-						sp.open_tran_count,
-						' +
-							CASE
-								WHEN EXISTS
-								(
-									SELECT
-										*
-									FROM sys.all_columns AS ac
-									WHERE
-										ac.object_id = OBJECT_ID('sys.dm_exec_sessions')
-										AND ac.name = 'group_id'
-								)
-									THEN 's.group_id'
-								ELSE 'CONVERT(INT, NULL) AS group_id'
-							END + ' 
-					FROM @sessions AS sp
-					LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
-						s.session_id = sp.session_id
-						AND s.login_time = sp.login_time
-					LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
-						sp.status <> ''sleeping''
-						AND r.session_id = sp.session_id
-						AND r.request_id = sp.request_id
-						AND
-						(
-							(
-								s.is_user_process = 0
-								AND sp.is_user_process = 0
-							)
-							OR
-							(
-								r.start_time = s.last_request_start_time
-								AND s.last_request_end_time <= sp.last_request_end_time
-							)
-						)
-				' +
-			CASE 
-				WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
-'
-					LEFT JOIN sys.dm_exec_query_stats AS qs ON
-							r.sql_handle = qs.sql_handle
-						AND	r.plan_handle = qs.plan_handle
-						AND	r.statement_start_offset = qs.statement_start_offset
-						AND	r.statement_end_offset = qs.statement_end_offset
-					LEFT JOIN sys.dm_exec_query_memory_grants mg ON
-							mg.session_id = sp.session_id 
-						AND	mg.request_id = sp.request_id
-					LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
-							mg.resource_semaphore_id = rs.resource_semaphore_id 
-						AND	mg.pool_id = rs.pool_id
-					LEFT JOIN sys.resource_governor_workload_groups wg ON
-							s.group_id = wg.group_id
-					LEFT JOIN sys.resource_governor_resource_pools rp ON
-							wg.pool_id = rp.pool_id'
+						N''''
+				END COLLATE Latin1_General_Bin2 AS sys_wait_info,
+				'
 				ELSE
 					''
-			END + '
-				) AS y
-					' + 
+		END	+
+		CASE
+			WHEN @get_task_info = 2 THEN
+				'tasks.physical_io,
+				tasks.context_switches,
+				tasks.tasks,
+				tasks.block_info,
+				tasks.wait_info AS task_wait_info,
+				tasks.thread_CPU_snapshot,
+				'
+			ELSE
+				''
+			END+
+		CASE 
+			WHEN NOT (@get_avg_time = 1 AND @recursion = 1) THEN
+				'CONVERT(INT, NULL) '
+			ELSE 
+				'qs.total_elapsed_time / qs.execution_count'
+		END +
+		'AS avg_elapsed_time 
+			FROM
+			(
+				SELECT TOP(@i)
+					sp.session_id,
+					sp.request_id,
+					COALESCE(r.logical_reads, s.logical_reads) AS reads,
+					COALESCE(r.reads, s.reads) AS physical_reads,
+					COALESCE(r.writes, s.writes) AS writes,
+					COALESCE(r.CPU_time, s.CPU_time) AS CPU,
+					' +
+				CASE 
+					WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+					'COALESCE(sp.memory_usage, 0.00) AS used_memory,
+					COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
+					COALESCE(mg.request_time, 0) as request_time,
+					COALESCE(mg.grant_time, ''19000101'') AS grant_time,
+					COALESCE(mg.wait_time_ms, 0) as wait_time_ms,
+					COALESCE(mg.requested_memory_kb, 0.00) AS requested_memory,
+					COALESCE(mg.granted_memory_kb, 0.00) AS granted_memory,
+					COALESCE(mg.required_memory_kb, 0.00) AS required_memory,
+					COALESCE(mg.ideal_memory_kb, 0.00) AS ideal_memory,
+					COALESCE(mg.dop, 0.00) AS dop,
+					COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
+					COALESCE(mg.queue_id, 0) AS queue_id,
+					COALESCE(mg.wait_order, 0) AS wait_order,
+					COALESCE(mg.is_next_candidate, 0) AS is_next_candidate,						
+					COALESCE(rs.target_memory_kb, 0) AS target_memory_mb,
+					COALESCE(rs.max_target_memory_kb, 0) AS max_target_memory_kb,
+					COALESCE(rs.total_memory_kb, 0) AS total_memory_kb,
+					COALESCE(rs.available_memory_kb, 0) AS available_memory_kb,
+					COALESCE(rs.granted_memory_kb, 0) AS granted_memory_kb,
+					COALESCE(rs.used_memory_kb, 0) AS used_memory_kb,
+					COALESCE(rs.grantee_count, 0) AS grantee_count,
+					COALESCE(rs.waiter_count, 0) AS waiter_count,
+					COALESCE(rs.timeout_error_count, 0) AS timeout_error_count,
+					COALESCE(wg.name, ''NA'') AS wg_name,
+					COALESCE(wg.request_max_memory_grant_percent, 0) AS request_max_memory_grant_percent,
+					COALESCE(wg.request_max_cpu_time_sec, 0) AS request_max_cpu_time_sec,
+					COALESCE(wg.request_memory_grant_timeout_sec, 0) AS request_memory_grant_timeout_sec,
+					COALESCE(wg.max_dop, 0) AS max_dop,
+					COALESCE(rp.name, ''NA'') AS rp_name,
+					COALESCE(rp.min_memory_percent, 0) AS min_memory_percent,
+					COALESCE(rp.max_memory_percent, 0) AS max_memory_percent,
+					COALESCE(rp.min_cpu_percent, 0) AS min_cpu_percent,
+					COALESCE(rp.max_cpu_percent, 0) AS max_cpu_percent,'
+					ELSE
+						'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
+				END +
+					'LOWER(sp.status) AS status,
+					COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
+					COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
+					COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
+					' +
+				CASE
+					WHEN 
+					(
+						@get_task_info <> 0
+						OR @find_block_leaders = 1 
+					) THEN
+					'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
+					sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
+					sp.wait_time AS wait_duration_ms,'
+					ELSE
+							''
+				END +
+					'NULLIF(sp.blocked, 0) AS blocking_session_id,
+					r.plan_handle,
+					NULLIF(r.percent_complete, 0) AS percent_complete,
+					sp.host_name,
+					sp.login_name,
+					sp.program_name,
+					s.host_process_id,
+					COALESCE(r.text_size, s.text_size) AS text_size,
+					COALESCE(r.language, s.language) AS language,
+					COALESCE(r.date_format, s.date_format) AS date_format,
+					COALESCE(r.date_first, s.date_first) AS date_first,
+					COALESCE(r.quoted_identifier, s.quoted_identifier) AS quoted_identifier,
+					COALESCE(r.arithabort, s.arithabort) AS arithabort,
+					COALESCE(r.ansi_null_dflt_on, s.ansi_null_dflt_on) AS ansi_null_dflt_on,
+					COALESCE(r.ansi_defaults, s.ansi_defaults) AS ansi_defaults,
+					COALESCE(r.ansi_warnings, s.ansi_warnings) AS ansi_warnings,
+					COALESCE(r.ansi_padding, s.ansi_padding) AS ansi_padding,
+					COALESCE(r.ansi_nulls, s.ansi_nulls) AS ansi_nulls,
+					COALESCE(r.concat_null_yields_null, s.concat_null_yields_null) AS concat_null_yields_null,
+					COALESCE(r.transaction_isolation_level, s.transaction_isolation_level) AS transaction_isolation_level,
+					COALESCE(r.lock_timeout, s.lock_timeout) AS lock_timeout,
+					COALESCE(r.deadlock_priority, s.deadlock_priority) AS deadlock_priority,
+					COALESCE(r.row_count, s.row_count) AS row_count,
+					COALESCE(r.command, sp.cmd) AS command_type,
+					COALESCE
+					(
+						CASE
+							WHEN
+							(
+								s.is_user_process = 0
+								AND r.total_elapsed_time >= 0
+							) THEN
+								DATEADD
+								(
+									ms,
+									1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())),
+									DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
+								)
+						END,
+						NULLIF(COALESCE(r.start_time, sp.last_request_end_time), CONVERT(DATETIME, ''19000101'', 112)),
+						sp.login_time
+					) AS start_time,
+					sp.login_time,
+					CASE
+						WHEN s.is_user_process = 1 THEN
+							s.last_request_start_time
+						ELSE
+							COALESCE
+							(
+								DATEADD
+								(
+									ms,
+									1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())),
+									DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
+								),
+								s.last_request_start_time
+							)
+					END AS last_request_start_time,
+					r.transaction_id,
+					sp.database_id,
+					sp.open_tran_count,
+					' +
+						CASE
+							WHEN EXISTS
+							(
+								SELECT
+									*
+								FROM sys.all_columns AS ac
+								WHERE
+									ac.object_id = OBJECT_ID('sys.dm_exec_sessions')
+									AND ac.name = 'group_id'
+							)
+								THEN 's.group_id'
+							ELSE 'CONVERT(INT, NULL) AS group_id'
+						END + ' 
+				FROM @sessions AS sp
+				LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
+					s.session_id = sp.session_id
+					AND s.login_time = sp.login_time
+				LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
+					sp.status <> ''sleeping''
+					AND r.session_id = sp.session_id
+					AND r.request_id = sp.request_id
+					AND
+					(
+						(
+							s.is_user_process = 0
+							AND sp.is_user_process = 0
+						)
+						OR
+						(
+							r.start_time = s.last_request_start_time
+							AND s.last_request_end_time <= sp.last_request_end_time
+						)
+					)
+			' +
+		CASE 
+			WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+'
+				LEFT JOIN sys.dm_exec_query_stats AS qs ON
+						r.sql_handle = qs.sql_handle
+					AND	r.plan_handle = qs.plan_handle
+					AND	r.statement_start_offset = qs.statement_start_offset
+					AND	r.statement_end_offset = qs.statement_end_offset
+				LEFT JOIN sys.dm_exec_query_memory_grants mg ON
+						mg.session_id = sp.session_id 
+					AND	mg.request_id = sp.request_id
+				LEFT JOIN sys.dm_exec_query_resource_semaphores rs ON
+						mg.resource_semaphore_id = rs.resource_semaphore_id 
+					AND	mg.pool_id = rs.pool_id
+				LEFT JOIN sys.resource_governor_workload_groups wg ON
+						s.group_id = wg.group_id
+				LEFT JOIN sys.resource_governor_resource_pools rp ON
+						wg.pool_id = rp.pool_id'
+			ELSE
+				''
+		END + '
+		) AS y
+		' + 
 				CASE 
 					WHEN @get_task_info = 2 THEN
 						CONVERT(VARCHAR(MAX), '') 
-						+'LEFT OUTER HASH JOIN
+					+'LEFT OUTER HASH JOIN
 						(
 							SELECT TOP(@i)
 								task_nodes.task_node.value(''(session_id/text())[1]'', ''SMALLINT'') AS session_id,
