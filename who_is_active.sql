@@ -92,7 +92,7 @@ ALTER PROC dbo.sp_WhoIsActive
 	--Data comes from DMV's sys.dm_exec_query_memory_grants
 	--sys.dm_exec_query_resource_semaphores, sys.resource_governor_workload_groups
 	--sys.resource_governor_resource_pools, and sys.dm_exec_query_stats
-	--Tested on SQL 2008 R2 SP3 10.50.6000.34 to 2017
+	--Tested on SQL 2005 to 2019
 	@get_memory_grant_info BIT = 0,
 
 	--Walk the blocking chain and count the number of 
@@ -400,12 +400,13 @@ Formatted/Non:	[collection_time] [datetime] NOT NULL
 Formatted/Non:	[memory_grant_info] [xml] NULL
 	(Requires @get_memory_grant_info)
 	Returns information about query memory grants from dm_exec_query_memory_grants
-	SQL 2008 R2 SP3 10.50.6000.34 Tested
+	Tested on SQL 2005 - 2019
 */
 AS
 BEGIN;
-	--Figure out the SQL version 
-	DECLARE @sql_version INT = (SELECT CASE WHEN @@VERSION LIKE '%2005%' THEN 2005 WHEN @@VERSION LIKE '%2008%' THEN 2008 WHEN @@VERSION LIKE '%2012%' THEN 2012 WHEN @@VERSION LIKE '%2014%' THEN 2014 WHEN @@VERSION LIKE '%2016%' THEN 2016 WHEN @@VERSION LIKE '%2017%' THEN 2017 WHEN @@VERSION LIKE '%2019%' THEN 2019 WHEN @@VERSION LIKE '%Azure (RTM)%' THEN 2032 ELSE -1 END)
+	--Figure out the SQL version...have to do it this way because of 2005
+	DECLARE @sql_version INT 
+	SET @sql_version = (SELECT CASE WHEN @@VERSION LIKE '%2005%' THEN 2005 WHEN @@VERSION LIKE '%2008%' THEN 2008 WHEN @@VERSION LIKE '%2012%' THEN 2012 WHEN @@VERSION LIKE '%2014%' THEN 2014 WHEN @@VERSION LIKE '%2016%' THEN 2016 WHEN @@VERSION LIKE '%2017%' THEN 2017 WHEN @@VERSION LIKE '%2019%' THEN 2019 WHEN @@VERSION LIKE '%Azure (RTM)%' THEN 2032 ELSE -1 END)
 
 	SET NOCOUNT ON; 
 	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
