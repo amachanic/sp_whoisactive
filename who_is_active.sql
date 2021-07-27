@@ -404,9 +404,9 @@ Formatted/Non:	[memory_grant_info] [xml] NULL
 */
 AS
 BEGIN;
-	--Figure out the SQL version...like to do it in one like but supporting 2005 still
+	--Figure out the SQL version...like to do it in one line and one way but supporting 2005 still
 	DECLARE @sql_version INT 
-	IF @@VERSION LIKE '%2005%' SET @sql_version =905000	ELSE SET @sql_version = CONVERT(INT,REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)),'.',''))
+	IF @@VERSION LIKE '%2005%' SET @sql_version = 905000 ELSE SET @sql_version = CONVERT(INT,REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)),'.',''))
 
 
 	SET NOCOUNT ON; 
