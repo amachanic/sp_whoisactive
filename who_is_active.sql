@@ -2090,7 +2090,7 @@ BEGIN;
 										MAX(mg.max_used_memory_kb) AS max_memory_usage,'
 									ELSE
 										'MAX(sp2.memusage) AS memory_usage,
-										0 AS max_memory_usage,'
+										CONVERT(INT, NULL) AS max_memory_usage,'
 								END +
 								'MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
@@ -2756,50 +2756,48 @@ BEGIN;
 								x.statement_start_offset,
 								x.statement_end_offset,
 								' +
-								CASE
-									WHEN @output_column_list LIKE '%|[program_name|]%' ESCAPE '|' THEN
-										'(
-											SELECT TOP(1)
-												CONVERT(uniqueidentifier, CONVERT(XML, '''').value(''xs:hexBinary( 
-												substring(sql:column("agent_info.job_id_string"), 0) )'', ''binary(16)'')) AS job_id,
-												agent_info.step_id,
-												(
-													SELECT TOP(1)
-														NULL
-													FOR XML
-														PATH(''job_name''),
-														TYPE
-												),
-												(
-													SELECT TOP(1)
-														NULL
-													FOR XML
-														PATH(''step_name''),
-														TYPE
-												)
-											FROM
-											(
+									CASE
+										WHEN @output_column_list LIKE '%|[program_name|]%' ESCAPE '|' THEN
+											'(
 												SELECT TOP(1)
-													SUBSTRING(x.program_name, CHARINDEX(''0x'', x.program_name) + 2, 32) AS job_id_string,
-													SUBSTRING(x.program_name, CHARINDEX('': Step '', x.program_name) + 7, CHARINDEX('')'', x.program_name, 
-													CHARINDEX('': Step '', x.program_name)) - (CHARINDEX('': Step '', x.program_name) + 7)) AS step_id
-												WHERE
-													x.program_name LIKE N''SQLAgent - TSQL JobStep (Job 0x%''
-											) AS agent_info
-											FOR XML
-												PATH(''agent_job_info''),
-												TYPE
-										),
-										'
-									ELSE ''
-								END +
-								CASE
-									WHEN @get_task_info = 2 THEN
-										'CONVERT(XML, x.block_info) AS block_info, 
-										'
-									ELSE
-										''
-								END + '
+													CONVERT(uniqueidentifier, CONVERT(XML, '''').value(''xs:hexBinary( substring(sql:column("agent_info.job_id_string"), 0) )'', ''binary(16)'')) AS job_id,
+													agent_info.step_id,
+													(
+														SELECT TOP(1)
+															NULL
+														FOR XML
+															PATH(''job_name''),
+															TYPE
+													),
+													(
+														SELECT TOP(1)
+															NULL
+														FOR XML
+															PATH(''step_name''),
+															TYPE
+													)
+												FROM
+												(
+													SELECT TOP(1)
+														SUBSTRING(x.program_name, CHARINDEX(''0x'', x.program_name) + 2, 32) AS job_id_string,
+														SUBSTRING(x.program_name, CHARINDEX('': Step '', x.program_name) + 7, CHARINDEX('')'', x.program_name, CHARINDEX('': Step '', x.program_name)) - (CHARINDEX('': Step '', x.program_name) + 7)) AS step_id
+													WHERE
+														x.program_name LIKE N''SQLAgent - TSQL JobStep (Job 0x%''
+												) AS agent_info
+												FOR XML
+													PATH(''agent_job_info''),
+													TYPE
+											),
+											'
+										ELSE ''
+									END +
+							CASE
+								WHEN @get_task_info = 2 THEN
+									'CONVERT(XML, x.block_info) AS block_info, 
+									'
+								ELSE
+									''
+							END + '
 										
 								x.host_process_id,
 								x.group_id
@@ -2810,7 +2808,8 @@ BEGIN;
 			ELSE
 				'NULL '
 		END + 
-			'AS additional_info, ' 
+			'AS additional_info, 
+			' 
 	+
 	CASE
 		WHEN
@@ -2879,8 +2878,8 @@ BEGIN;
 			ELSE 
 		'NULL '
 		END + 
-			'AS memory_grant_info, ' +  
-			'x.start_time, 
+			'AS memory_grant_info,   
+			x.start_time, 
 			' +
 		CASE
 			WHEN
@@ -3047,7 +3046,8 @@ BEGIN;
 						ELSE
 							'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
 					END +
-						'LOWER(sp.status) AS status,
+						'
+						LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
 						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
@@ -3143,10 +3143,10 @@ BEGIN;
 							END + ' 
 					FROM @sessions AS sp
 					LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
-						s.session_id = sp.session_id
+							s.session_id = sp.session_id
 						AND s.login_time = sp.login_time
 					LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
-						sp.status <> ''sleeping''
+							sp.status <> ''sleeping''
 						AND r.session_id = sp.session_id
 						AND r.request_id = sp.request_id
 						AND
