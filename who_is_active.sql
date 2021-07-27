@@ -404,9 +404,10 @@ Formatted/Non:	[memory_grant_info] [xml] NULL
 */
 AS
 BEGIN;
-	--Figure out the SQL version...have to do it this way because of 2005
+	--Figure out the SQL version...like to do it in one like but supporting 2005 still
 	DECLARE @sql_version INT 
-	SET @sql_version = (SELECT CASE WHEN @@VERSION LIKE '%2005%' THEN 2005 WHEN @@VERSION LIKE '%2008%' THEN 2008 WHEN @@VERSION LIKE '%2012%' THEN 2012 WHEN @@VERSION LIKE '%2014%' THEN 2014 WHEN @@VERSION LIKE '%2016%' THEN 2016 WHEN @@VERSION LIKE '%2017%' THEN 2017 WHEN @@VERSION LIKE '%2019%' THEN 2019 WHEN @@VERSION LIKE '%Azure (RTM)%' THEN 2032 ELSE -1 END)
+	IF @@VERSION LIKE '%2005%' SET @sql_version =905000	ELSE SET @sql_version = CONVERT(INT,REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)),'.',''))
+
 
 	SET NOCOUNT ON; 
 	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -489,13 +490,7 @@ BEGIN;
 		RETURN;
 	END;
 
-	IF @sql_version = -1
-	BEGIN;
-		RAISERROR('Sorry, you have an unsupported SQL Server Version', 16, 1);
-		RETURN;
-	END;
-
-	IF @sql_version < 2008 and @get_memory_grant_info = 1
+	IF @sql_version < 1001600 and @get_memory_grant_info = 1
 	BEGIN;
 		RAISERROR('Sorry, advanced memory options are not available on your SQL Server Version', 16, 1);
 		RETURN;
@@ -2084,8 +2079,8 @@ BEGIN;
 									END COLLATE SQL_Latin1_General_CP1_CI_AS
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,' +
-								CASE 
-									WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+								CASE--2008 or better 
+									WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 										'MAX(mg.used_memory_kb) AS memory_usage,
 										MAX(mg.max_used_memory_kb) AS max_memory_usage,'
 									ELSE
@@ -2154,8 +2149,8 @@ BEGIN;
 									AND @blocker = 0
 								) 
 							' +
-							CASE 
-								WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+							CASE --2008 or better
+								WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 											'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
 												mg.session_id = sp2.spid 
 											AND	mg.request_id = sp2.request_id
@@ -3008,8 +3003,8 @@ BEGIN;
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
 						' +
-					CASE 
-						WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+					CASE --2008 or better
+						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 						'COALESCE(sp.memory_usage, 0.00) AS used_memory,
 						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
 						COALESCE(mg.request_time, 0) as request_time,
@@ -3162,8 +3157,8 @@ BEGIN;
 							)
 						)
 				' +
-			CASE 
-				WHEN (@get_memory_grant_info = 1 AND @sql_version > 2005) THEN
+			CASE--2008 or better 
+				WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 '
 					LEFT JOIN sys.dm_exec_query_stats AS qs ON
 							r.sql_handle = qs.sql_handle
