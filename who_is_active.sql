@@ -404,9 +404,9 @@ Formatted/Non:	[memory_grant_info] [xml] NULL
 */
 AS
 BEGIN;
-	--Figure out the SQL version...like to do it in one line and one way but supporting 2005 still
+	--Figure out the SQL version...tested on 2005 SP3
 	DECLARE @sql_version INT 
-	IF @@VERSION LIKE '%2005%' SET @sql_version = 905000 ELSE SET @sql_version = CONVERT(INT,REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)),'.',''))
+	SET @sql_version = CONVERT(INT,LEFT(REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)),'.',''),8))
 
 
 	SET NOCOUNT ON; 
@@ -490,7 +490,7 @@ BEGIN;
 		RETURN;
 	END;
 
-	IF @sql_version < 1001600 and @get_memory_grant_info = 1
+	IF @sql_version < 10016000 and @get_memory_grant_info = 1
 	BEGIN;
 		RAISERROR('Sorry, advanced memory options are not available on your SQL Server Version', 16, 1);
 		RETURN;
@@ -2080,7 +2080,7 @@ BEGIN;
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,' +
 								CASE--2008 or better 
-									WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+									WHEN (@get_memory_grant_info = 1 AND @sql_version >= 10016000) THEN
 										'MAX(mg.used_memory_kb) AS memory_usage,
 										MAX(mg.max_used_memory_kb) AS max_memory_usage,'
 									ELSE
@@ -2150,7 +2150,7 @@ BEGIN;
 								) 
 							' +
 							CASE --2008 or better
-								WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+								WHEN (@get_memory_grant_info = 1 AND @sql_version >= 10016000) THEN
 											'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
 												mg.session_id = sp2.spid 
 											AND	mg.request_id = sp2.request_id
@@ -3004,7 +3004,7 @@ BEGIN;
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
 						' +
 					CASE --2008 or better
-						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 10016000) THEN
 						'COALESCE(sp.memory_usage, 0.00) AS used_memory,
 						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
 						COALESCE(mg.request_time, 0) as request_time,
@@ -3158,7 +3158,7 @@ BEGIN;
 						)
 				' +
 			CASE--2008 or better 
-				WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+				WHEN (@get_memory_grant_info = 1 AND @sql_version >= 10016000) THEN
 '
 					LEFT JOIN sys.dm_exec_query_stats AS qs ON
 							r.sql_handle = qs.sql_handle
