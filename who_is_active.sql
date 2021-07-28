@@ -2803,8 +2803,7 @@ BEGIN;
 			ELSE
 				'NULL '
 		END + 
-			'AS additional_info, 
-			' 
+			'AS additional_info, ' 
 	+
 	CASE
 		WHEN
@@ -3055,7 +3054,8 @@ BEGIN;
 						) THEN
 						'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
 						sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
-						sp.wait_time AS wait_duration_ms,'
+						sp.wait_time AS wait_duration_ms,
+						'
 						ELSE
 								''
 					END +
@@ -3099,24 +3099,22 @@ BEGIN;
 										DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
 									)
 							END,
-							NULLIF(COALESCE(r.start_time, sp.last_request_end_time), CONVERT(DATETIME, ''19000101'', 112)),
-							sp.login_time
-						) AS start_time,
-						sp.login_time,
-						CASE
-							WHEN s.is_user_process = 1 THEN
-								s.last_request_start_time
-							ELSE
-								COALESCE
-								(
-									DATEADD
-									(
-										ms,
-										1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - 
-										DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())),
-										DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
-									),
+							NULLIF(COALESCE(r.start_time, sp.last_request_end_time), CONVERT(DATETIME, ''19000101'', 112)),	sp.login_time) AS start_time,
+							sp.login_time,
+							CASE
+								WHEN s.is_user_process = 1 THEN
 									s.last_request_start_time
+								ELSE
+									COALESCE
+									(
+										DATEADD
+										(
+											ms,
+											1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - 
+											DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())),
+											DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
+										),
+										s.last_request_start_time
 								)
 						END AS last_request_start_time,
 						r.transaction_id,
@@ -3179,7 +3177,7 @@ BEGIN;
 					''
 			END + '
 				) AS y
-					' + 
+				' + 
 				CASE 
 					WHEN @get_task_info = 2 THEN
 						CONVERT(VARCHAR(MAX), '') 
@@ -3679,7 +3677,7 @@ BEGIN;
 						t_info.session_id,
 						COALESCE(t_info.request_id, -1)
 				) AS tempdb_info ON
-					tempdb_info.session_id = y.session_id
+						tempdb_info.session_id = y.session_id
 					AND tempdb_info.request_id =
 						CASE
 							WHEN y.status = N''sleeping'' THEN
