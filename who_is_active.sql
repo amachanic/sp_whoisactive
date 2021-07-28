@@ -2903,7 +2903,8 @@ BEGIN;
 							ELSE tempdb_info.tempdb_current
 						END,
 						0
-			) AS tempdb_current, 
+					) 
+			AS tempdb_current, 
 			'
 			+
 			CASE
@@ -3099,8 +3100,8 @@ BEGIN;
 										DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
 									)
 							END,
-							NULLIF(COALESCE(r.start_time, sp.last_request_end_time), CONVERT(DATETIME, ''19000101'', 112)),	sp.login_time) AS start_time,
-							sp.login_time,
+						NULLIF(COALESCE(r.start_time, sp.last_request_end_time), CONVERT(DATETIME, ''19000101'', 112)),	sp.login_time) AS start_time,
+						sp.login_time,
 							CASE
 								WHEN s.is_user_process = 1 THEN
 									s.last_request_start_time
@@ -3115,8 +3116,9 @@ BEGIN;
 											DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
 										),
 										s.last_request_start_time
-								)
-						END AS last_request_start_time,
+									)
+							END 
+						AS last_request_start_time,
 						r.transaction_id,
 						sp.database_id,
 						sp.open_tran_count,
