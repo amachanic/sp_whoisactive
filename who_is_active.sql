@@ -3164,7 +3164,6 @@ BEGIN;
 							r.sql_handle = qs.sql_handle
 						AND	r.plan_handle = qs.plan_handle
 						AND	r.statement_start_offset = qs.statement_start_offset
-						AND	r.statement_end_offset = qs.statement_end_offset
 					LEFT JOIN sys.dm_exec_query_memory_grants mg ON
 							mg.session_id = sp.session_id 
 						AND	mg.request_id = sp.request_id
