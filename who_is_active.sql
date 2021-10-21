@@ -1888,7 +1888,17 @@ BEGIN;
 				spy.sql_handle,
 				spy.host_name,
 				spy.login_name,
-				spy.program_name,
+				CASE LEFT(spy.program_name,15)
+					WHEN ''SQLAgent - TSQL'' THEN 
+						(SELECT TOP 1 ''SQL Job = ''+j.name 
+						FROM msdb.dbo.sysjobs WITH (NOLOCK) j
+						INNER JOIN msdb.dbo.sysjobsteps WITH (NOLOCK) s 
+						ON j.job_id=s.job_id
+						WHERE RIGHT(CAST(s.job_id AS NVARCHAR(50)),10) = RIGHT(SUBSTRING(spy.program_name,30,34),10) )
+					WHEN ''SQL Server Prof'' THEN ''SQL Server Profiler''
+				ELSE 
+					spy.program_name
+				END as program_name,
 				spy.database_id,
 				spy.memory_usage,
 				spy.max_memory_usage,
