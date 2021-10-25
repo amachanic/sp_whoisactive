@@ -1052,7 +1052,7 @@ BEGIN;
 			UNION ALL
 			SELECT '[collection_time]', 44
 			UNION ALL
-			SELECT '[memory_grant_info]', 45
+			SELECT '[memory_grant_info]', 23
 			WHERE
 				@get_memory_grant_info = 1
 			UNION ALL
