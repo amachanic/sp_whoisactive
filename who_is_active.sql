@@ -2479,7 +2479,7 @@ BEGIN;
 					' +
 				CASE
 					WHEN 
-						@output_column_list LIKE '%|[blocking_session_id|]%' ESCAPE '|' 
+						@output_column_list LIKE '%|[blocking_session_id|]%' ESCAPE '|' OR @find_block_leaders = 1
 						AND @recursion = 1
 							THEN 
 								'NULLIF(x.blocking_session_id, 0) '
