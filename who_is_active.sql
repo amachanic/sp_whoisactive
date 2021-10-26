@@ -88,11 +88,12 @@ ALTER PROC dbo.sp_WhoIsActive
 	--applock_hash, metadata_resource, metadata_class_id, object_name, schema_name
 	@get_additional_info BIT = 0,
 
-	--Will get memory grant info for any queries requesting memory
-	--Data comes from DMV's sys.dm_exec_query_memory_grants
-	--sys.dm_exec_query_resource_semaphores, sys.resource_governor_workload_groups
-	--sys.resource_governor_resource_pools, and sys.dm_exec_query_stats
-	--Tested on SQL 2005 to 2019
+	--When the parameter @get_memory_grant_info is set to 1, and you are on a SQL Server version 2008 or greater 
+	--you will see 4 additional top-level columns appear containing memory grant information (requested_memory, 
+	--granted_memory, max_used_memory and memory_grant_info). When enabled this feature also changes the
+	--measurement used for [used_memory] from 8K page units to KB. If you click the link on the additional 
+	--field called [memory_grant_info] you will be presented with an XML list of additional memory counters 
+	--related to the query selected to further help your investigation.
 	@get_memory_grant_info BIT = 0,
 
 	--Walk the blocking chain and count the number of 
@@ -208,14 +209,15 @@ Non-Formatted:	[context_switches] [bigint] NULL
 
 Formatted:		[used_memory] [varchar](30) NOT NULL
 Non-Formatted:	[used_memory] [bigint] NOT NULL
-	For an active request, total memory consumption for the current query (memusage + granted_memory) in Pages
+	For an active request, total memory consumption for the current query in 8K page units
 	For a sleeping session, total current memory consumption
-	(When @get_memory_grant_info = 1)
-	For an active request, used_memory kb for the current query
+	(When @get_memory_grant_info = 1 the used_memory output will change
+	from 8K page units to kb used up to this point of observation for the current query)
 
 Formatted:		[max_used_memory] [varchar](30) NOT NULL
 Non-Formatted:	[max_used_memory] [bigint] NOT NULL
-	For an active request, max_used_memory kb for the current query
+	For an active request, the maximum amount of memory, in KB, that has been used during
+	processing up to this point of observation for the current query
 	(Requires @get_memory_grant_info = 1)
 
 Formatted:		[requested_memory] [varchar](30) NOT NULL
@@ -399,15 +401,24 @@ Formatted/Non:	[collection_time] [datetime] NOT NULL
 
 Formatted/Non:	[memory_grant_info] [xml] NULL
 	(Requires @get_memory_grant_info)
-	Returns information about query memory grants from dm_exec_query_memory_grants
-	Tested on SQL 2005 - 2019
+	Returns memory grant information from several key DMVs
+	in an XML format. The fields presented are: 
+	[request_time], [grant_time], [wait_time_ms], [requested_memory_kb], 
+	[granted_memory_kb], [used_memory_kb], [max_used_memory_kb], [ideal_memory_kb], 
+	[required_memory_kb], [queue_id], [wait_order], [is_next_candidate], [dop], 
+	[query_subtree_cost], [timeout_error_count], [target_memory_mb], 
+	[max_target_memory_kb], [total_memory_kb], [available_memory_kb], 
+	[granted_memory_kb], [used_memory_kb], [grantee_count], [waiter_count], 
+	[request_max_memory_grant_percent], [request_max_cpu_time_sec], 
+	[request_memory_grant_timeout_sec], [max_dop], [min_memory_percent], 
+	[max_memory_percent], [min_cpu_percent], [max_cpu_percent]
+
 */
 AS
 BEGIN;
 
-	--Figure out the SQL version, easier this way
 	DECLARE @sql_version INT 
-	SET @sql_version = CONVERT(INT,LEFT(REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)),'.',''),7))
+	SET @sql_version = CONVERT(INT, LEFT(REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)), '.', ''), 7))
 
 	SET NOCOUNT ON; 
 	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -489,9 +500,9 @@ BEGIN;
 		RETURN;
 	END;
 
-		IF @sql_version < 1001600 and @get_memory_grant_info = 1
+	IF @sql_version < 1001600 and @get_memory_grant_info = 1
 	BEGIN;
-		RAISERROR('Sorry, advanced memory options are not available on your SQL Server Version', 16, 1);
+		RAISERROR('Sorry, advanced memory options are not available on SQL Server versions less than 2008', 16, 1);
 		RETURN;
 	END;
 
@@ -1071,7 +1082,7 @@ BEGIN;
 			SELECT '[max_used_memory_delta]', 23
 			WHERE
 				@delta_interval > 0 
-			AND @get_memory_grant_info = 1
+				AND @get_memory_grant_info = 1
 		) AS x ON 
 			x.column_name LIKE token ESCAPE '|'
 	)
@@ -2142,9 +2153,9 @@ BEGIN;
 							' +
 							CASE --2008 or better
 								WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
-											'LEFT JOIN sys.dm_exec_query_memory_grants AS mg ON
+											'LEFT OUTER JOIN sys.dm_exec_query_memory_grants AS mg ON
 												mg.session_id = sp2.spid 
-											AND	mg.request_id = sp2.request_id
+												AND mg.request_id = sp2.request_id
 											'	
 								ELSE
 									''
@@ -2332,7 +2343,7 @@ BEGIN;
 						ELSE 
 							'0 '
 					END + 
-						'AS elapsed_time, 
+					'AS elapsed_time, 
 					' +
 					CASE
 						WHEN
@@ -2801,67 +2812,71 @@ BEGIN;
 						@output_column_list LIKE '%|[memory_grant_info|]%' ESCAPE '|'
 						AND @get_memory_grant_info = 1 THEN'
 						(
-						SELECT TOP(@i)
-							(SELECT TOP(@i)	 
-								x.request_time,
-								x.grant_time,
-								x.wait_time_ms,
-								x.requested_memory AS requested_memory_kb,	
-								x.granted_memory AS granted_memory_kb,
-								x.used_memory AS used_memory_kb,	
-								x.max_used_memory AS max_used_memory_kb,
-								x.ideal_memory AS ideal_memory_kb,	
-								x.required_memory AS required_memory_kb,
-								x.queue_id AS queue_id,
-								x.wait_order AS wait_order,
-								x.is_next_candidate AS is_next_candidate,
-								x.dop,
-								CAST(x.query_subtree_cost AS NUMERIC(13,4)) AS query_subtree_cost
-							FOR XML 
-								PATH(''query_memory_grants''), 
-								TYPE
+							SELECT TOP(@i)
+							(
+								SELECT TOP(@i)	 
+									x.request_time,
+									x.grant_time,
+									x.wait_time_ms,
+									x.requested_memory AS requested_memory_kb,	
+									x.granted_memory AS granted_memory_kb,
+									x.used_memory AS used_memory_kb,	
+									x.max_used_memory AS max_used_memory_kb,
+									x.ideal_memory AS ideal_memory_kb,	
+									x.required_memory AS required_memory_kb,
+									x.queue_id AS queue_id,
+									x.wait_order AS wait_order,
+									x.is_next_candidate AS is_next_candidate,
+									x.dop,
+									CAST(x.query_subtree_cost AS NUMERIC(13,4)) AS query_subtree_cost
+								FOR XML 
+									PATH(''query_memory_grants''), 
+									TYPE
 							),
-							(SELECT TOP(@i)
-								x.timeout_error_count,
-								x.target_memory_mb,
-								x.max_target_memory_kb,
-								x.total_memory_kb,
-								x.available_memory_kb,
-								x.granted_memory_kb,
-								x.used_memory_kb,
-								x.grantee_count,
-								x.waiter_count
-							FOR XML 
-								PATH(''query_resource_semaphores''), 
-								TYPE
+							(
+								SELECT TOP(@i)
+									x.timeout_error_count,
+									x.target_memory_mb,
+									x.max_target_memory_kb,
+									x.total_memory_kb,
+									x.available_memory_kb,
+									x.granted_memory_kb,
+									x.used_memory_kb,
+									x.grantee_count,
+									x.waiter_count
+								FOR XML 
+									PATH(''query_resource_semaphores''), 
+									TYPE
 							),
-							(SELECT TOP(@i)	
-								x.wg_name AS name,
-								x.request_max_memory_grant_percent,
-								x.request_max_cpu_time_sec,
-								x.request_memory_grant_timeout_sec,
-								x.max_dop
-							FOR XML 
-								PATH(''resource_governor_workload_groups''), 
-								TYPE
+							(
+								SELECT TOP(@i)	
+									x.wg_name AS name,
+									x.request_max_memory_grant_percent,
+									x.request_max_cpu_time_sec,
+									x.request_memory_grant_timeout_sec,
+									x.max_dop
+								FOR XML 
+									PATH(''resource_governor_workload_groups''), 
+									TYPE
 							),
-							(SELECT TOP(@i)	
-								x.rp_name AS name,
-								x.min_memory_percent,
-								x.max_memory_percent,
-								x.min_cpu_percent,
-								x.max_cpu_percent
-							FOR XML 
-								PATH(''resource_governor_resource_pools''), 
-								TYPE
+							(
+								SELECT TOP(@i)	
+									x.rp_name AS name,
+									x.min_memory_percent,
+									x.max_memory_percent,
+									x.min_cpu_percent,
+									x.max_cpu_percent
+								FOR XML 
+									PATH(''resource_governor_resource_pools''), 
+									TYPE
 							)
-						FOR XML 
-							PATH(''memory_counters''), 
-							TYPE
-					)				
+							FOR XML 
+								PATH(''memory_counters''), 
+								TYPE
+						)				
 					'
 					ELSE 
-				'NULL '
+						'NULL '
 				END + 
 				'AS memory_grant_info,   
 				x.start_time, 
@@ -2952,8 +2967,7 @@ BEGIN;
 												N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) + 6, CHARINDEX(N'')'', y.resource_description, (CHARINDEX(N''(SPID='', y.resource_description) + 6)) - (CHARINDEX(N''(SPID='', y.resource_description) + 6)) + '']''
 											ELSE
 												N''''
-										END 
-					COLLATE Latin1_General_Bin2 AS sys_wait_info, 
+										END COLLATE Latin1_General_Bin2 AS sys_wait_info, 
 										'
 							ELSE
 								''
