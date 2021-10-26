@@ -2794,7 +2794,7 @@ BEGIN;
 					ELSE
 						'NULL '
 				END + 
-					'AS additional_info,' 
+					'AS additional_info, ' 
 					+
 				CASE
 					WHEN
