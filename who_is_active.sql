@@ -2741,16 +2741,17 @@ BEGIN;
 													END +
 												N'')''
 											WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
-												N'':'' + SUBSTRING
-                                                         						 (
-                                                            						 	y.resource_description, 
+												N'':'' +
+													SUBSTRING
+                                                         						(
+                                                            							y.resource_description,
                                                             							CHARINDEX(N''nodeId'', y.resource_description) + 7,
-														CASE 
+														CASE
 															WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description)) > 0
-														 	THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description) 
-															ELSE 4 
+															THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description)
+															ELSE 4
 														END
-                                                         						 )
+                                                         						)
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
 											WHEN
@@ -2775,15 +2776,15 @@ BEGIN;
 								tasks.thread_CPU_snapshot,
 								'
 							ELSE
-								'' 
+								''
 					END +
-					CASE 
+					CASE
 						WHEN NOT (@get_avg_time = 1 AND @recursion = 1) THEN
 							'CONVERT(INT, NULL) '
-						ELSE 
+						ELSE
 							'qs.total_elapsed_time / qs.execution_count '
-					END + 
-						'AS avg_elapsed_time 
+					END +
+						'AS avg_elapsed_time
 				FROM
 				(
 					SELECT TOP(@i)
@@ -2800,14 +2801,14 @@ BEGIN;
 						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
 						' +
 						CASE
-							WHEN 
+							WHEN
 							(
 								@get_task_info <> 0
-								OR @find_block_leaders = 1 
+								OR @find_block_leaders = 1
 							) THEN
 								'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
 								sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
-								sp.wait_time AS wait_duration_ms, 
+								sp.wait_time AS wait_duration_ms,
 								'
 							ELSE
 								''
@@ -2909,7 +2910,7 @@ BEGIN;
 						)
 				) AS y
 				' + 
-				CASE 
+				CASE
 					WHEN @get_task_info = 2 THEN
 						CONVERT(VARCHAR(MAX), '') +
 						'LEFT OUTER HASH JOIN
@@ -2950,7 +2951,7 @@ BEGIN;
 												waits.request_id
 											ELSE
 												NULL
-										END AS [request_id],											
+										END AS [request_id],
 										CASE waits.r
 											WHEN 1 THEN
 												waits.physical_io
@@ -3060,15 +3061,15 @@ BEGIN;
 													SUM(CONVERT(BIGINT, t.context_switches_count)) OVER (PARTITION BY t.session_id, t.request_id) AS context_switches, 
 													' +
 													CASE
-														WHEN 
+														WHEN
 															@output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
 															AND @sys_info = 1
 															THEN
 																'SUM(tr.usermode_time + tr.kernel_time) OVER (PARTITION BY t.session_id, t.request_id) '
 														ELSE
 															'CONVERT(BIGINT, NULL) '
-													END + 
-														' AS thread_CPU_snapshot, 
+													END +
+														' AS thread_CPU_snapshot,
 													COUNT(*) OVER (PARTITION BY t.session_id, t.request_id) AS num_tasks,
 													t.task_address,
 													t.task_state,
@@ -3092,7 +3093,7 @@ BEGIN;
 														AND sp2.status <> ''sleeping''
 												) AS sp20
 												LEFT OUTER HASH JOIN
-												( 
+												(
 												' +
 													CASE
 														WHEN @sys_info = 1 THEN
@@ -3121,7 +3122,7 @@ BEGIN;
 														END +
 												'
 												) AS w ON
-													w.worker_address = t.worker_address 
+													w.worker_address = t.worker_address
 												' +
 												CASE
 													WHEN
@@ -3185,12 +3186,17 @@ BEGIN;
 																		END +
 																	N'')''
 																WHEN wt.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
-																	N'':'' + SUBSTRING(wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7,
-																				 CASE 
-																			 		WHEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description)) > 0
-																			 		THEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', wt.resource_description) 
-																					ELSE 4 
-																				 END)
+																	N'':'' +
+																		SUBSTRING
+																		(
+																			wt.resource_description,
+																			CHARINDEX(N''nodeId'', wt.resource_description) + 7,
+																			CASE 
+																				WHEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description)) > 0
+																			 	THEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', wt.resource_description)
+																				ELSE 4 
+																			END
+																		)
 																WHEN wt.wait_type LIKE N''LATCH[_]%'' THEN
 																	N'' ['' + LEFT(wt.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', wt.resource_description), 0), LEN(wt.resource_description) + 1) - 1) + N'']''
 																ELSE 
@@ -3403,13 +3409,13 @@ BEGIN;
 								y.request_id
 						END
 				' +
-				CASE 
-					WHEN 
-						NOT 
+				CASE
+					WHEN
+						NOT
 						(
-							@get_avg_time = 1 
+							@get_avg_time = 1
 							AND @recursion = 1
-						) THEN 
+						) THEN
 							''
 					ELSE
 						'LEFT OUTER HASH JOIN
@@ -3423,7 +3429,7 @@ BEGIN;
 							AND qs.statement_start_offset = y.statement_start_offset
 							AND qs.statement_end_offset = y.statement_end_offset
 						'
-				END + 
+				END +
 			') AS x
 			OPTION (KEEPFIXED PLAN, OPTIMIZE FOR (@i = 1)); ';
 
@@ -3431,7 +3437,7 @@ BEGIN;
 
 		SET @last_collection_start = GETDATE();
 
-		IF 
+		IF
 			@recursion = -1
 			AND @sys_info = 1
 		BEGIN;
