@@ -2081,7 +2081,7 @@ BEGIN;
 									END COLLATE SQL_Latin1_General_CP1_CI_AS
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,' + 
-								CASE--2008 or better 
+								CASE
 									WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 										'MAX(mg.used_memory_kb) AS memory_usage,
 										MAX(mg.max_used_memory_kb) AS max_memory_usage,'
@@ -2151,7 +2151,7 @@ BEGIN;
 									AND @blocker = 0
 								)
 							' +
-							CASE --2008 or better
+							CASE 
 								WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 											'LEFT OUTER JOIN sys.dm_exec_query_memory_grants AS mg ON
 												mg.session_id = sp2.spid 
@@ -3000,8 +3000,8 @@ BEGIN;
 						COALESCE(r.logical_reads, s.logical_reads) AS reads,
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
-						COALESCE(r.CPU_time, s.CPU_time) AS CPU, '+
-					CASE --2008 or better
+						COALESCE(r.CPU_time, s.CPU_time) AS CPU, ' +
+					CASE 
 						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN 
 					'	COALESCE(sp.memory_usage, 0.00) AS used_memory,
 						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
@@ -3151,7 +3151,7 @@ BEGIN;
 							)
 						)
 						' +
-					CASE--2008 or better 
+					CASE
 						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 		'
 							LEFT JOIN sys.dm_exec_query_stats AS qs ON
