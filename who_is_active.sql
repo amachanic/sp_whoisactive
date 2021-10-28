@@ -2654,7 +2654,8 @@ BEGIN;
 												''
 										END + '
 										x.host_process_id,
-										x.group_id
+										x.group_id,
+                                        x.context_info
 									FOR XML
 										PATH(''additional_info''),
 										TYPE
@@ -2837,6 +2838,7 @@ BEGIN;
 						COALESCE(r.deadlock_priority, s.deadlock_priority) AS deadlock_priority,
 						COALESCE(r.row_count, s.row_count) AS row_count,
 						COALESCE(r.command, sp.cmd) AS command_type,
+                        NULLIF(COALESCE(r.context_info, s.context_info), 0x) AS context_info,
 						COALESCE
 						(
 							CASE
