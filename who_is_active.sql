@@ -2743,15 +2743,15 @@ BEGIN;
 											WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
 												N'':'' +
 													SUBSTRING
-                                                         						(
-                                                            							y.resource_description,
-                                                            							CHARINDEX(N''nodeId'', y.resource_description) + 7,
+														 						(
+																						y.resource_description,
+																						CHARINDEX(N''nodeId'', y.resource_description) + 7,
 														CASE
 															WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description)) > 0
 															THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description)
 															ELSE 4
 														END
-                                                         						)
+														 						)
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
 											WHEN
@@ -4366,7 +4366,16 @@ BEGIN;
 											ELSE NULL
 										END AS [Lock/@schema_name],
 										l4.principal_name AS [Lock/@principal_name],
-										l4.resource_description AS [Lock/@resource_description],
+										REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+										REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+										REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+										l4.resource_description, 
+										CHAR(1), N'?'), CHAR(2), N'?'), CHAR(3), N'?'), CHAR(4), N'?'), CHAR(5), N'?'), CHAR(6), N'?'), 
+										CHAR(7), N'?'), CHAR(8), N'?'), CHAR(11), N'?'), CHAR(12), N'?'), CHAR(14), N'?'), CHAR(15), N'?'), 
+										CHAR(16), N'?'), CHAR(17), N'?'), CHAR(18), N'?'), CHAR(19), N'?'), CHAR(20), N'?'), CHAR(21), N'?'), 
+										CHAR(22), N'?'), CHAR(23), N'?'), CHAR(24), N'?'), CHAR(25), N'?'), CHAR(26), N'?'), CHAR(27), N'?'), 
+										CHAR(28), N'?'), CHAR(29), N'?'), CHAR(30), N'?'), CHAR(31), N'?') 
+										AS [Lock/@resource_description],
 										l4.request_mode AS [Lock/@request_mode],
 										l4.request_status AS [Lock/@request_status],
 										SUM(l4.request_count) AS [Lock/@request_count]
