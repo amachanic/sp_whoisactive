@@ -1218,7 +1218,7 @@ BEGIN;
 		writes BIGINT NULL,
 		tempdb_allocations BIGINT NULL,
 		tempdb_current BIGINT NULL,
-		CPU INT NULL,
+		CPU BIGINT NULL,
 		thread_CPU_snapshot BIGINT NULL,
 		context_switches BIGINT NULL,
 		used_memory BIGINT NOT NULL, 
