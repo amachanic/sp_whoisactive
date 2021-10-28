@@ -1991,7 +1991,7 @@ BEGIN;
 								MAX(sp2.memusage) AS memory_usage,
 								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
-								RTRIM(sp2.waitresource) AS wait_resource,
+								CASE WHEN CHARINDEX('' (LATCH '', sp2.waitresource) > 0 THEN LEFT(sp2.waitresource, CHARINDEX('' (LATCH '', sp2.waitresource) - 1) ELSE RTRIM(sp2.waitresource) END AS wait_resource,
 								MAX(sp2.waittime) AS wait_time,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0) AS blocked,
 								MAX
@@ -2072,7 +2072,7 @@ BEGIN;
 										sp2.request_id
 								END,
 								RTRIM(sp2.lastwaittype),
-								RTRIM(sp2.waitresource),
+								CASE WHEN CHARINDEX('' (LATCH '', sp2.waitresource) > 0 THEN LEFT(sp2.waitresource, CHARINDEX('' (LATCH '', sp2.waitresource) - 1) ELSE RTRIM(sp2.waitresource) END,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0)
 						) AS sp1
 					) AS sp0
