@@ -2654,7 +2654,8 @@ BEGIN;
 												''
 										END + '
 										x.host_process_id,
-										x.group_id
+										x.group_id,
+                                        x.implicit_transactions
 									FOR XML
 										PATH(''additional_info''),
 										TYPE
@@ -2874,6 +2875,20 @@ BEGIN;
 						r.transaction_id,
 						sp.database_id,
 						sp.open_tran_count,
+						CASE 
+							WHEN 
+								EXISTS 
+								(  
+									SELECT 
+										1/0 
+									FROM sys.dm_tran_active_transactions AS tat
+									JOIN sys.dm_tran_session_transactions AS tst
+										ON tst.transaction_id = tat.transaction_id
+									WHERE tat.name = ''implicit_transaction''
+									AND sp.session_id = tst.session_id 
+								)  THEN ''ON'' 
+							ELSE CONVERT(VARCHAR(2), NULL)
+						END AS implicit_transactions,
 						' +
 							CASE
 								WHEN EXISTS
