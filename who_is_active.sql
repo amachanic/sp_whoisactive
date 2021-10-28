@@ -3001,7 +3001,7 @@ BEGIN;
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU, 
-						' +
+						' + 
 						CASE 
 							WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN 
 								'sp.memory_usage AS used_memory,
@@ -3036,19 +3036,20 @@ BEGIN;
 								rp.min_memory_percent AS min_memory_percent,
 								rp.max_memory_percent AS max_memory_percent,
 								rp.min_cpu_percent AS min_cpu_percent,
-								rp.max_cpu_percent AS max_cpu_percent,'
+								rp.max_cpu_percent AS max_cpu_percent,
+								'
 							ELSE
-								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
-						END +
+								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory, 
 						'
-						LOWER(sp.status) AS status,
+						END +
+						'LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
-						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
+						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset, 
 						' +
 						CASE
 							WHEN (@get_task_info <> 0 OR @find_block_leaders = 1) THEN
-								'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
+							'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
 								sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
 								sp.wait_time AS wait_duration_ms,
 								'
