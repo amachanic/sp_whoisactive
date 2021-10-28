@@ -207,26 +207,26 @@ Formatted:		[context_switches] [varchar](30) NULL
 Non-Formatted:	[context_switches] [bigint] NULL
 	Shows the number of context switches, for active requests
 
-Formatted:		[used_memory] [varchar](30) NOT NULL
-Non-Formatted:	[used_memory] [bigint] NOT NULL
+Formatted:		[used_memory] [varchar](30) NULL
+Non-Formatted:	[used_memory] [bigint] NULL
 	For an active request, total memory consumption for the current query in 8K page units
 	For a sleeping session, total current memory consumption
 	(When @get_memory_grant_info = 1 the used_memory output will change
 	from 8K page units to kb used up to this point of observation for the current query)
 
-Formatted:		[max_used_memory] [varchar](30) NOT NULL
-Non-Formatted:	[max_used_memory] [bigint] NOT NULL
+Formatted:		[max_used_memory] [varchar](30) NULL
+Non-Formatted:	[max_used_memory] [bigint] NULL
 	For an active request, the maximum amount of memory, in KB, that has been used during
 	processing up to this point of observation for the current query
 	(Requires @get_memory_grant_info = 1)
 
-Formatted:		[requested_memory] [varchar](30) NOT NULL
-Non-Formatted:	[requested_memory] [bigint] NOT NULL
+Formatted:		[requested_memory] [varchar](30) NULL
+Non-Formatted:	[requested_memory] [bigint] NULL
 	For an active request, requested_memory kb for the current query
 	(Requires @get_memory_grant_info = 1)
 
-Formatted:		[granted_memory] [varchar](30) NOT NULL
-Non-Formatted:	[granted_memory] [bigint] NOT NULL
+Formatted:		[granted_memory] [varchar](30) NULL
+Non-Formatted:	[granted_memory] [bigint] NULL
 	For an active request, granted_memory kb for the current query
 	(Requires @get_memory_grant_info = 1)
 
