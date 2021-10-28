@@ -2743,15 +2743,15 @@ BEGIN;
 											WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
 												N'':'' +
 													SUBSTRING
-                                                         						(
-                                                            							y.resource_description,
-                                                            							CHARINDEX(N''nodeId'', y.resource_description) + 7,
+													(
+																						y.resource_description,
+																						CHARINDEX(N''nodeId'', y.resource_description) + 7,
 														CASE
 															WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description)) > 0
 															THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description)
 															ELSE 4
 														END
-                                                         						)
+													)
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
 											WHEN
