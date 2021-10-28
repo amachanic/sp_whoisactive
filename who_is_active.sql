@@ -1305,10 +1305,10 @@ BEGIN;
 		CPU INT NULL,
 		thread_CPU_snapshot BIGINT NULL,
 		context_switches BIGINT NULL,
-		used_memory BIGINT NOT NULL, 
-		max_used_memory BIGINT NOT NULL,
-		requested_memory BIGINT NOT NULL, 
-		granted_memory BIGINT NOT NULL,
+		used_memory BIGINT NULL, 
+		max_used_memory BIGINT NULL,
+		requested_memory BIGINT NULL, 
+		granted_memory BIGINT NULL,
 		tasks SMALLINT NULL,
 		status VARCHAR(30) NOT NULL,
 		wait_info NVARCHAR(4000) NULL,
@@ -2153,10 +2153,10 @@ BEGIN;
 							' +
 							CASE 
 								WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
-											'LEFT OUTER JOIN sys.dm_exec_query_memory_grants AS mg ON
-												mg.session_id = sp2.spid 
-												AND mg.request_id = sp2.request_id
-											'	
+									'LEFT OUTER JOIN sys.dm_exec_query_memory_grants AS mg ON
+										mg.session_id = sp2.spid 
+										AND mg.request_id = sp2.request_id
+									'	
 								ELSE
 									''
 							END +
@@ -3000,60 +3000,61 @@ BEGIN;
 						COALESCE(r.logical_reads, s.logical_reads) AS reads,
 						COALESCE(r.reads, s.reads) AS physical_reads,
 						COALESCE(r.writes, s.writes) AS writes,
-						COALESCE(r.CPU_time, s.CPU_time) AS CPU, ' +
-					CASE 
-						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN 
-					'	COALESCE(sp.memory_usage, 0.00) AS used_memory,
-						COALESCE(sp.max_memory_usage, 0.00) AS max_used_memory,
-						COALESCE(mg.request_time, 0) as request_time,
-						COALESCE(mg.grant_time, ''19000101'') AS grant_time,
-						COALESCE(mg.wait_time_ms, 0) as wait_time_ms,
-						COALESCE(mg.requested_memory_kb, 0.00) AS requested_memory,
-						COALESCE(mg.granted_memory_kb, 0.00) AS granted_memory,
-						COALESCE(mg.required_memory_kb, 0.00) AS required_memory,
-						COALESCE(mg.ideal_memory_kb, 0.00) AS ideal_memory,
-						COALESCE(mg.dop, 0.00) AS dop,
-						COALESCE(mg.query_cost, 0.00) AS query_subtree_cost,
-						COALESCE(mg.queue_id, 0) AS queue_id,
-						COALESCE(mg.wait_order, 0) AS wait_order,
-						COALESCE(mg.is_next_candidate, 0) AS is_next_candidate,						
-						COALESCE(rs.target_memory_kb, 0) AS target_memory_mb,
-						COALESCE(rs.max_target_memory_kb, 0) AS max_target_memory_kb,
-						COALESCE(rs.total_memory_kb, 0) AS total_memory_kb,
-						COALESCE(rs.available_memory_kb, 0) AS available_memory_kb,
-						COALESCE(rs.granted_memory_kb, 0) AS granted_memory_kb,
-						COALESCE(rs.used_memory_kb, 0) AS used_memory_kb,
-						COALESCE(rs.grantee_count, 0) AS grantee_count,
-						COALESCE(rs.waiter_count, 0) AS waiter_count,
-						COALESCE(rs.timeout_error_count, 0) AS timeout_error_count,
-						COALESCE(wg.name, ''NA'') AS wg_name,
-						COALESCE(wg.request_max_memory_grant_percent, 0) AS request_max_memory_grant_percent,
-						COALESCE(wg.request_max_cpu_time_sec, 0) AS request_max_cpu_time_sec,
-						COALESCE(wg.request_memory_grant_timeout_sec, 0) AS request_memory_grant_timeout_sec,
-						COALESCE(wg.max_dop, 0) AS max_dop,
-						COALESCE(rp.name, ''NA'') AS rp_name,
-						COALESCE(rp.min_memory_percent, 0) AS min_memory_percent,
-						COALESCE(rp.max_memory_percent, 0) AS max_memory_percent,
-						COALESCE(rp.min_cpu_percent, 0) AS min_cpu_percent,
-						COALESCE(rp.max_cpu_percent, 0) AS max_cpu_percent,'
-						ELSE
-							'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
-					END +
+						COALESCE(r.CPU_time, s.CPU_time) AS CPU, 
+						' +
+						CASE 
+							WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN 
+								'sp.memory_usage AS used_memory,
+								sp.max_memory_usage AS max_used_memory,
+								mg.request_time as request_time,
+								mg.grant_time AS grant_time,
+								mg.wait_time_ms as wait_time_ms,
+								mg.requested_memory_kb AS requested_memory,
+								mg.granted_memory_kb AS granted_memory,
+								mg.required_memory_kb AS required_memory,
+								mg.ideal_memory_kb AS ideal_memory,
+								mg.dop AS dop,
+								mg.query_cost AS query_subtree_cost,
+								mg.queue_id AS queue_id,
+								mg.wait_order AS wait_order,
+								mg.is_next_candidate AS is_next_candidate,						
+								rs.target_memory_kb AS target_memory_mb,
+								rs.max_target_memory_kb AS max_target_memory_kb,
+								rs.total_memory_kb AS total_memory_kb,
+								rs.available_memory_kb AS available_memory_kb,
+								rs.granted_memory_kb AS granted_memory_kb,
+								rs.used_memory_kb AS used_memory_kb,
+								rs.grantee_count AS grantee_count,
+								rs.waiter_count AS waiter_count,
+								rs.timeout_error_count AS timeout_error_count,
+								wg.name AS wg_name,
+								wg.request_max_memory_grant_percent AS request_max_memory_grant_percent,
+								wg.request_max_cpu_time_sec AS request_max_cpu_time_sec,
+								wg.request_memory_grant_timeout_sec AS request_memory_grant_timeout_sec,
+								wg.max_dop AS max_dop,
+								rp.name AS rp_name,
+								rp.min_memory_percent AS min_memory_percent,
+								rp.max_memory_percent AS max_memory_percent,
+								rp.min_cpu_percent AS min_cpu_percent,
+								rp.max_cpu_percent AS max_cpu_percent,'
+							ELSE
+								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,'
+						END +
 						'
 						LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
 						COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
 						COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
 						' +
-					CASE
-						WHEN (@get_task_info <> 0 OR @find_block_leaders = 1) THEN
-						'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
-						sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
-						sp.wait_time AS wait_duration_ms,
-						'
-						ELSE
-						''
-					END
+						CASE
+							WHEN (@get_task_info <> 0 OR @find_block_leaders = 1) THEN
+								'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
+								sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
+								sp.wait_time AS wait_duration_ms,
+								'
+							ELSE
+								''
+						END
 						 +
 						'NULLIF(sp.blocked, 0) AS blocking_session_id,
 						r.plan_handle,
