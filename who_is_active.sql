@@ -2655,7 +2655,7 @@ BEGIN;
 										END + '
 										x.host_process_id,
 										x.group_id,
-                                        x.context_info
+										x.context_info
 									FOR XML
 										PATH(''additional_info''),
 										TYPE
@@ -2744,15 +2744,15 @@ BEGIN;
 											WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
 												N'':'' +
 													SUBSTRING
-                                                         						(
-                                                            							y.resource_description,
-                                                            							CHARINDEX(N''nodeId'', y.resource_description) + 7,
+														 						(
+																						y.resource_description,
+																						CHARINDEX(N''nodeId'', y.resource_description) + 7,
 														CASE
 															WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description)) > 0
 															THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description)
 															ELSE 4
 														END
-                                                         						)
+														 						)
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
 											WHEN
@@ -2838,7 +2838,7 @@ BEGIN;
 						COALESCE(r.deadlock_priority, s.deadlock_priority) AS deadlock_priority,
 						COALESCE(r.row_count, s.row_count) AS row_count,
 						COALESCE(r.command, sp.cmd) AS command_type,
-                        NULLIF(COALESCE(r.context_info, s.context_info), 0x) AS context_info,
+						NULLIF(COALESCE(r.context_info, s.context_info), 0x) AS context_info,
 						COALESCE
 						(
 							CASE
