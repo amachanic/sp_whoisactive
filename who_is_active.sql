@@ -96,7 +96,6 @@ ALTER PROC dbo.sp_WhoIsActive
 	--related to the query selected to further help your investigation.
 	@get_memory_grant_info BIT = 0,
 
-
 	--Walk the blocking chain and count the number of 
 	--total SPIDs blocked all the way down by a given session
 	--Also enables task_info Level 1, if @get_task_info is set to 0
