@@ -3679,7 +3679,50 @@ BEGIN;
 			@statement_start_offset INT,
 			@statement_end_offset INT,
 			@start_time DATETIME,
-			@database_name sysname;
+			@database_name SYSNAME,
+			@server_name SYSNAME = @@SERVERNAME,
+			@skip_databases_sql NVARCHAR(MAX) = N'
+				SELECT
+					d.name
+				FROM sys.databases AS d
+				INNER JOIN sys.availability_replicas AS r
+					ON d.replica_id = r.replica_id
+				WHERE NOT EXISTS
+					  (
+						  SELECT
+							  1/0
+						  FROM sys.dm_hadr_availability_group_states AS s
+						  WHERE s.primary_replica = r.replica_server_name
+					  )
+				AND r.secondary_role_allow_connections_desc = ''READ_ONLY''
+				AND r.replica_server_name = @server_name
+				OPTION (RECOMPILE);';
+
+		IF EXISTS 
+		(
+			SELECT
+				1/0
+			FROM sys.all_objects ao 
+			WHERE ao.name = N'dm_hadr_database_replica_states'
+		)
+		BEGIN
+			
+			DECLARE 
+				@skip_databases table 
+			(
+				database_name sysname
+			);	
+		
+			INSERT  
+				@skip_databases
+			(
+				database_name
+			)
+			EXEC sys.sp_executesql
+				@skip_databases_sql,
+			  N'@server_name sysname',
+				@server_name;	  
+		END;
 
 		IF 
 			@recursion = 1
@@ -4176,6 +4219,13 @@ BEGIN;
 							AND recursion = 1
 					)
 					AND database_name <> '(null)'
+					AND NOT EXISTS
+						(
+							SELECT
+								1/0
+							FROM @skip_databases AS sd
+							WHERE sd.database_name = #locks.database_name
+						)
 				OPTION (KEEPFIXED PLAN);
 
 			OPEN locks_cursor;
@@ -4546,7 +4596,14 @@ BEGIN;
 			FOR
 				SELECT DISTINCT
 					database_name
-				FROM #blocked_requests;
+				FROM #blocked_requests
+				WHERE NOT EXISTS
+					  (
+						  SELECT
+							  1/0
+						  FROM @skip_databases AS sd
+						  WHERE sd.database_name = #blocked_requests.database_name
+					  );
 				
 			OPEN blocks_cursor;
 			
