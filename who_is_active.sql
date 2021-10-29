@@ -191,7 +191,7 @@ Non-Formatted:	[tempdb_current] [bigint] NULL
 	For a sleeping session, number of TempDB pages currently allocated for the session
 
 Formatted:		[CPU] [varchar](30) NULL
-Non-Formatted:	[CPU] [int] NULL
+Non-Formatted:	[CPU] [bigint] NULL
 	For an active request, total CPU time consumed by the current query
 	For a sleeping session, total CPU time consumed over the lifetime of the session
 
