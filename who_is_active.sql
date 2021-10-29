@@ -191,7 +191,7 @@ Non-Formatted:	[tempdb_current] [bigint] NULL
 	For a sleeping session, number of TempDB pages currently allocated for the session
 
 Formatted:		[CPU] [varchar](30) NULL
-Non-Formatted:	[CPU] [int] NULL
+Non-Formatted:	[CPU] [bigint] NULL
 	For an active request, total CPU time consumed by the current query
 	For a sleeping session, total CPU time consumed over the lifetime of the session
 
@@ -2743,15 +2743,15 @@ BEGIN;
 											WHEN y.wait_type IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
 												N'':'' +
 													SUBSTRING
-                                                         						(
-                                                            							y.resource_description,
-                                                            							CHARINDEX(N''nodeId'', y.resource_description) + 7,
+													(
+																						y.resource_description,
+																						CHARINDEX(N''nodeId'', y.resource_description) + 7,
 														CASE
 															WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description)) > 0
 															THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description)
 															ELSE 4
 														END
-                                                         						)
+													)
 											WHEN y.wait_type LIKE N''LATCH[_]%'' THEN
 												N'' ['' + LEFT(y.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', y.resource_description), 0), LEN(y.resource_description) + 1) - 1) + N'']''
 											WHEN
