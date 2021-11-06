@@ -500,7 +500,7 @@ BEGIN;
 		RETURN;
 	END;
 	
-	IF @sql_version < 1001600 and @get_memory_grant_info = 1
+	IF @get_memory_grant_info = 1 AND @sql_version < 1001600
 	BEGIN;
 		RAISERROR('Advanced memory options are not available on SQL Server versions less than 2008', 16, 1);
 		RETURN;
@@ -1794,7 +1794,28 @@ BEGIN;
 		
 		DECLARE 
 			@sql VARCHAR(MAX), 
-			@sql_n NVARCHAR(MAX);
+			@sql_n NVARCHAR(MAX),
+			@core_session_join VARCHAR(MAX) =
+				'@sessions AS sp
+				LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
+					s.session_id = sp.session_id
+					AND s.login_time = sp.login_time
+				LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
+					sp.status <> ''sleeping''
+					AND r.session_id = sp.session_id
+					AND r.request_id = sp.request_id
+					AND
+					(
+						(
+							s.is_user_process = 0
+							AND sp.is_user_process = 0
+						)
+						OR
+						(
+							r.start_time = s.last_request_start_time
+							AND s.last_request_end_time <= sp.last_request_end_time
+						)
+					) ';
 
 		SET @sql = 
 			CONVERT(VARCHAR(MAX), '') +
@@ -1897,7 +1918,7 @@ BEGIN;
 				spy.database_id,
 				' + 
 				CASE
-					WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+					WHEN @get_memory_grant_info = 1 THEN
 						'COALESCE(mg.used_memory_kb / 8, spy.memory_usage) AS memory_usage,
 						mg.max_used_memory_kb,
 						'
@@ -2269,7 +2290,7 @@ BEGIN;
 			) AS spy
 			' +
 			CASE 
-				WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+				WHEN @get_memory_grant_info = 1 THEN
 					'OUTER APPLY
 					(
 						SELECT TOP(@i)
@@ -2485,7 +2506,7 @@ BEGIN;
 					WHEN 
 						@output_column_list LIKE '%|[requested_memory|]%' ESCAPE '|'
 							THEN 
-								'x.requested_memory '
+								'x.requested_memory_kb '
 					ELSE 
 						'0 '
 				END + 
@@ -2496,7 +2517,7 @@ BEGIN;
 						@output_column_list LIKE '%|[granted_memory|]%' ESCAPE '|'
 
 							THEN 
-								'x.granted_memory '
+								'x.mg_granted_memory_kb '
 					ELSE 
 						'0 '
 				END + 
@@ -2818,34 +2839,34 @@ BEGIN;
 									x.request_time,
 									x.grant_time,
 									x.wait_time_ms,
-									x.requested_memory AS requested_memory_kb,	
-									x.granted_memory AS granted_memory_kb,
-									x.used_memory AS used_memory_kb,	
+									x.requested_memory_kb,	
+									x.mg_granted_memory_kb,
+									x.used_memory AS used_memory_kb,
 									x.max_used_memory AS max_used_memory_kb,
-									x.ideal_memory AS ideal_memory_kb,	
-									x.required_memory AS required_memory_kb,
-									x.queue_id AS queue_id,
-									x.wait_order AS wait_order,
-									x.is_next_candidate AS is_next_candidate,
+									x.ideal_memory_kb,	
+									x.required_memory_kb,
+									x.queue_id,
+									x.wait_order,
+									x.is_next_candidate,
 									x.dop,
-									CAST(x.query_subtree_cost AS NUMERIC(13,4)) AS query_subtree_cost
+									CAST(x.query_cost AS NUMERIC(38, 4)) AS query_cost
 								FOR XML 
-									PATH(''query_memory_grants''), 
+									PATH(''memory_grant''), 
 									TYPE
 							),
 							(
 								SELECT TOP(@i)
 									x.timeout_error_count,
-									x.target_memory_mb,
+									x.target_memory_kb,
 									x.max_target_memory_kb,
 									x.total_memory_kb,
 									x.available_memory_kb,
-									x.granted_memory_kb,
+									x.rs_granted_memory_kb,
 									x.used_memory_kb,
 									x.grantee_count,
 									x.waiter_count
 								FOR XML 
-									PATH(''query_resource_semaphores''), 
+									PATH(''resource_semaphore''), 
 									TYPE
 							),
 							(
@@ -2856,7 +2877,7 @@ BEGIN;
 									x.request_memory_grant_timeout_sec,
 									x.max_dop
 								FOR XML 
-									PATH(''resource_governor_workload_groups''), 
+									PATH(''workload_group''), 
 									TYPE
 							),
 							(
@@ -2867,7 +2888,7 @@ BEGIN;
 									x.min_cpu_percent,
 									x.max_cpu_percent
 								FOR XML 
-									PATH(''resource_governor_resource_pools''), 
+									PATH(''resource_pool''), 
 									TYPE
 							)
 							FOR XML 
@@ -3012,40 +3033,40 @@ BEGIN;
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
 						' +
 						CASE 
-							WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN 
+							WHEN @get_memory_grant_info = 1 THEN 
 								'sp.memory_usage AS used_memory,
 								sp.max_memory_usage AS max_used_memory,
-								mg.request_time as request_time,
-								mg.grant_time AS grant_time,
-								mg.wait_time_ms as wait_time_ms,
-								mg.requested_memory_kb AS requested_memory,
-								mg.granted_memory_kb AS granted_memory,
-								mg.required_memory_kb AS required_memory,
-								mg.ideal_memory_kb AS ideal_memory,
+								mg.request_time,
+								mg.grant_time,
+								mg.wait_time_ms,
+								mg.requested_memory_kb,
+								mg.granted_memory_kb AS mg_granted_memory_kb,
+								mg.required_memory_kb,
+								mg.ideal_memory_kb,
 								mg.dop AS dop,
-								mg.query_cost AS query_subtree_cost,
+								mg.query_cost AS query_cost,
 								mg.queue_id AS queue_id,
 								mg.wait_order AS wait_order,
-								mg.is_next_candidate AS is_next_candidate,						
-								rs.target_memory_kb AS target_memory_mb,
-								rs.max_target_memory_kb AS max_target_memory_kb,
-								rs.total_memory_kb AS total_memory_kb,
-								rs.available_memory_kb AS available_memory_kb,
-								rs.granted_memory_kb AS granted_memory_kb,
-								rs.used_memory_kb AS used_memory_kb,
-								rs.grantee_count AS grantee_count,
-								rs.waiter_count AS waiter_count,
-								rs.timeout_error_count AS timeout_error_count,
+								mg.is_next_candidate,
+								rs.target_memory_kb,
+								rs.max_target_memory_kb,
+								rs.total_memory_kb,
+								rs.available_memory_kb,
+								rs.granted_memory_kb AS rs_granted_memory_kb,
+								rs.used_memory_kb,
+								rs.grantee_count,
+								rs.waiter_count,
+								rs.timeout_error_count,
 								wg.name AS wg_name,
-								wg.request_max_memory_grant_percent AS request_max_memory_grant_percent,
-								wg.request_max_cpu_time_sec AS request_max_cpu_time_sec,
-								wg.request_memory_grant_timeout_sec AS request_memory_grant_timeout_sec,
-								wg.max_dop AS max_dop,
+								wg.request_max_memory_grant_percent,
+								wg.request_max_cpu_time_sec,
+								wg.request_memory_grant_timeout_sec,
+								wg.max_dop,
 								rp.name AS rp_name,
-								rp.min_memory_percent AS min_memory_percent,
-								rp.max_memory_percent AS max_memory_percent,
-								rp.min_cpu_percent AS min_cpu_percent,
-								rp.max_cpu_percent AS max_cpu_percent,
+								rp.min_memory_percent,
+								rp.max_memory_percent,
+								rp.min_cpu_percent,
+								rp.max_cpu_percent,
 								'
 							ELSE
 								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory, 
@@ -3144,45 +3165,42 @@ BEGIN;
 									THEN 's.group_id'
 								ELSE 'CONVERT(INT, NULL) AS group_id'
 							END + '
-					FROM @sessions AS sp
-					LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
-						s.session_id = sp.session_id
-						AND s.login_time = sp.login_time
-					LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
-						sp.status <> ''sleeping''
-						AND r.session_id = sp.session_id
-						AND r.request_id = sp.request_id
-						AND
-						(
-							(
-								s.is_user_process = 0
-								AND sp.is_user_process = 0
-							)
-							OR
-							(
-								r.start_time = s.last_request_start_time
-								AND s.last_request_end_time <= sp.last_request_end_time
-							)
-						)
-						'+
+					FROM ' +
 					CASE
-						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
-							'LEFT OUTER JOIN sys.dm_exec_query_stats AS qs ON
-								qs.sql_handle = r.sql_handle
-								AND qs.plan_handle = r.plan_handle
-								AND qs.statement_start_offset = r.statement_start_offset
-							LEFT OUTER JOIN sys.dm_exec_query_memory_grants AS mg ON
-								sp.session_id = mg.session_id
-								AND sp.request_id = mg.request_id
-							LEFT OUTER JOIN sys.dm_exec_query_resource_semaphores AS rs ON
-								rs.resource_semaphore_id = mg.resource_semaphore_id
-								AND rs.pool_id = mg.pool_id
-							LEFT OUTER JOIN sys.resource_governor_workload_groups AS wg ON
-								wg.group_id = s.group_id
-							LEFT OUTER JOIN sys.resource_governor_resource_pools AS rp ON
-								rp.pool_id = wg.pool_id'
-						ELSE
-							''
+						WHEN @get_memory_grant_info = 1 THEN
+							'(
+								SELECT TOP(@i)
+									rp0.*
+								FROM sys.resource_governor_resource_pools AS rp0
+							) AS rp
+							RIGHT OUTER HASH JOIN
+							(
+								(
+									SELECT TOP(@i)
+										wg0.*
+									FROM sys.resource_governor_workload_groups AS wg0
+								) AS wg
+								RIGHT OUTER HASH JOIN
+								(
+									(
+										SELECT TOP(@i)
+											rs0.*
+										FROM sys.dm_exec_query_resource_semaphores AS rs0
+									) AS rs
+									RIGHT OUTER HASH JOIN
+									(
+										' + @core_session_join +
+										'LEFT OUTER LOOP JOIN sys.dm_exec_query_memory_grants AS mg ON
+											sp.session_id = mg.session_id
+											AND sp.request_id = mg.request_id
+									) ON
+										rs.resource_semaphore_id = mg.resource_semaphore_id
+										AND rs.pool_id = mg.pool_id
+								) ON
+									wg.group_id = s.group_id
+							) ON
+								rp.pool_id = wg.pool_id '
+						ELSE @core_session_join
 					END + '
 				) AS y
 				' + 
