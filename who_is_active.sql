@@ -88,12 +88,8 @@ ALTER PROC dbo.sp_WhoIsActive
 	--applock_hash, metadata_resource, metadata_class_id, object_name, schema_name
 	@get_additional_info BIT = 0,
 
-	--When the parameter @get_memory_grant_info is set to 1, and you are on a SQL Server version 2008 or greater 
-	--you will see 4 additional top-level columns appear containing memory grant information (requested_memory, 
-	--granted_memory, max_used_memory and memory_grant_info). When enabled this feature also changes the
-	--measurement used for [used_memory] from 8K page units to KB. If you click the link on the additional 
-	--field called [memory_grant_info] you will be presented with an XML list of additional memory counters 
-	--related to the query selected to further help your investigation.
+	--When enabled (available for SQL Server 2008 or greater) causes four additional top-level columns
+	--to appear: requested_memory, granted_memory, max_used_memory, and memory_grant_info.
 	@get_memory_grant_info BIT = 0,
 
 	--Walk the blocking chain and count the number of 
@@ -207,12 +203,10 @@ Formatted:		[context_switches] [varchar](30) NULL
 Non-Formatted:	[context_switches] [bigint] NULL
 	Shows the number of context switches, for active requests
 
-Formatted:		[used_memory] [varchar](30) NULL
-Non-Formatted:	[used_memory] [bigint] NULL
+Formatted:		[used_memory] [varchar](30) NOT NULL
+Non-Formatted:	[used_memory] [bigint] NOT NULL
 	For an active request, total memory consumption for the current query in 8K page units
 	For a sleeping session, total current memory consumption
-	(When @get_memory_grant_info = 1 the used_memory output will change
-	from 8K page units to kb used up to this point of observation for the current query)
 
 Formatted:		[max_used_memory] [varchar](30) NULL
 Non-Formatted:	[max_used_memory] [bigint] NULL
@@ -1305,7 +1299,7 @@ BEGIN;
 		CPU BIGINT NULL,
 		thread_CPU_snapshot BIGINT NULL,
 		context_switches BIGINT NULL,
-		used_memory BIGINT NULL, 
+		used_memory BIGINT NOT NULL, 
 		max_used_memory BIGINT NULL,
 		requested_memory BIGINT NULL, 
 		granted_memory BIGINT NULL,
@@ -1901,8 +1895,17 @@ BEGIN;
 				spy.login_name,
 				spy.program_name,
 				spy.database_id,
-				spy.memory_usage,
-				spy.max_memory_usage,
+				' + 
+				CASE
+					WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+						'COALESCE(mg.used_memory_kb / 8, spy.memory_usage) AS memory_usage,
+						mg.max_used_memory_kb,
+						'
+					ELSE
+						'spy.memory_usage,				
+						CONVERT(INT, NULL) AS max_memory_usage,
+						'
+				END + '
 				spy.open_tran_count,
 				' +
 				CASE
@@ -1987,7 +1990,6 @@ BEGIN;
 						sp0.program_name,
 						sp0.database_id,
 						sp0.memory_usage,
-						sp0.max_memory_usage,
 						sp0.open_tran_count, 
 						' +
 						CASE
@@ -2038,7 +2040,6 @@ BEGIN;
 							sp1.program_name,
 							sp1.database_id,
 							MAX(sp1.memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS memory_usage,
-							MAX(sp1.max_memory_usage) OVER (PARTITION BY sp1.session_id, sp1.request_id) AS max_memory_usage,
 							MAX(sp1.open_tran_count)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS open_tran_count,
 							sp1.wait_type,
 							sp1.wait_resource,
@@ -2081,18 +2082,8 @@ BEGIN;
 									END COLLATE SQL_Latin1_General_CP1_CI_AS
 								) AS program_name,
 								MAX(sp2.dbid) AS database_id,
-								' + 
-								CASE
-									WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
-										'MAX(mg.used_memory_kb) AS memory_usage,
-										MAX(mg.max_used_memory_kb) AS max_memory_usage,
-										'
-									ELSE
-										'MAX(sp2.memusage) AS memory_usage,
-										CONVERT(INT, NULL) AS max_memory_usage,
-										'
-								END +
-								'MAX(sp2.open_tran) AS open_tran_count,
+								MAX(sp2.memusage) AS memory_usage,
+								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
 								RTRIM(sp2.waitresource) AS wait_resource,
 								MAX(sp2.waittime) AS wait_time,
@@ -2155,15 +2146,6 @@ BEGIN;
 								)
 							' +
 							CASE 
-								WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
-									'LEFT OUTER JOIN sys.dm_exec_query_memory_grants AS mg ON
-										mg.session_id = sp2.spid 
-										AND mg.request_id = sp2.request_id
-									'	
-								ELSE
-									''
-							END +
-							CASE 
 								WHEN 
 								(
 									@get_task_info = 0 
@@ -2188,6 +2170,7 @@ BEGIN;
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0)
 						) AS sp1
 					) AS sp0
+
 					WHERE
 						@blocker = 1
 						OR
@@ -2284,6 +2267,22 @@ BEGIN;
 						')
 				) AS spx
 			) AS spy
+			' +
+			CASE 
+				WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
+					'OUTER APPLY
+					(
+						SELECT TOP(@i)
+							mg0.*
+						FROM sys.dm_exec_query_memory_grants AS mg0
+						WHERE
+							mg0.session_id = spy.session_id
+							AND mg0.request_id = spy.request_id
+					) AS mg
+					'
+				ELSE
+					''
+			END + '
 			WHERE
 				spy.r = 1; 
 			' + 
