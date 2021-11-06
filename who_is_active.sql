@@ -205,24 +205,24 @@ Non-Formatted:	[context_switches] [bigint] NULL
 
 Formatted:		[used_memory] [varchar](30) NOT NULL
 Non-Formatted:	[used_memory] [bigint] NOT NULL
-	For an active request, total memory consumption for the current query in 8K page units
+	For an active request, total memory consumption for the current query
 	For a sleeping session, total current memory consumption
 
 Formatted:		[max_used_memory] [varchar](30) NULL
 Non-Formatted:	[max_used_memory] [bigint] NULL
+	(Requires @get_memory_grant_info = 1)
 	For an active request, the maximum amount of memory, in KB, that has been used during
 	processing up to this point of observation for the current query
-	(Requires @get_memory_grant_info = 1)
 
 Formatted:		[requested_memory] [varchar](30) NULL
 Non-Formatted:	[requested_memory] [bigint] NULL
-	For an active request, requested_memory kb for the current query
 	(Requires @get_memory_grant_info = 1)
+	For an active request, requested_memory kb for the current query
 
 Formatted:		[granted_memory] [varchar](30) NULL
 Non-Formatted:	[granted_memory] [bigint] NULL
-	For an active request, granted_memory kb for the current query
 	(Requires @get_memory_grant_info = 1)
+	For an active request, granted_memory kb for the current query
 
 Formatted:		[physical_io_delta] [varchar](30) NULL
 Non-Formatted:	[physical_io_delta] [bigint] NULL
@@ -502,7 +502,7 @@ BEGIN;
 	
 	IF @get_memory_grant_info = 1 AND @sql_version < 1001600
 	BEGIN;
-		RAISERROR('Advanced memory options are not available on SQL Server versions less than 2008', 16, 1);
+		RAISERROR('Advanced memory options are not available for SQL Server 2005.', 16, 1);
 		RETURN;
 	END;
 
@@ -2191,7 +2191,6 @@ BEGIN;
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0)
 						) AS sp1
 					) AS sp0
-
 					WHERE
 						@blocker = 1
 						OR
@@ -3069,8 +3068,8 @@ BEGIN;
 								rp.max_cpu_percent,
 								'
 							ELSE
-								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory, 
-						'
+								'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,
+								'
 						END +
 						'LOWER(sp.status) AS status,
 						COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
