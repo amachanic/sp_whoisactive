@@ -2878,8 +2878,7 @@ BEGIN;
 					'
 					ELSE 
 						'NULL '
-				END + 
-				'AS memory_grant_info, 
+				END + 'AS memory_grant_info, 
 				x.start_time, 
 				'
 				+
@@ -3170,19 +3169,19 @@ BEGIN;
 					CASE
 						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 							'LEFT OUTER JOIN sys.dm_exec_query_stats AS qs ON
-								r.sql_handle = qs.sql_handle
-								AND r.plan_handle = qs.plan_handle
-								AND r.statement_start_offset = qs.statement_start_offset
-							LEFT OUTER JOIN sys.dm_exec_query_memory_grants mg ON
-								mg.session_id = sp.session_id 
-								AND mg.request_id = sp.request_id
-							LEFT OUTER JOIN sys.dm_exec_query_resource_semaphores rs ON
-								mg.resource_semaphore_id = rs.resource_semaphore_id 
-								AND mg.pool_id = rs.pool_id
-							LEFT OUTER JOIN sys.resource_governor_workload_groups wg ON
-								s.group_id = wg.group_id
-							LEFT OUTER JOIN sys.resource_governor_resource_pools rp ON
-								wg.pool_id = rp.pool_id'
+								qs.sql_handle = r.sql_handle
+								AND qs.plan_handle = r.plan_handle
+								AND qs.statement_start_offset = r.statement_start_offset
+							LEFT OUTER JOIN sys.dm_exec_query_memory_grants AS mg ON
+								sp.session_id = mg.session_id
+								AND sp.request_id = mg.request_id
+							LEFT OUTER JOIN sys.dm_exec_query_resource_semaphores AS rs ON
+								rs.resource_semaphore_id = mg.resource_semaphore_id
+								AND rs.pool_id = mg.pool_id
+							LEFT OUTER JOIN sys.resource_governor_workload_groups AS wg ON
+								wg.group_id = s.group_id
+							LEFT OUTER JOIN sys.resource_governor_resource_pools AS rp ON
+								rp.pool_id = wg.pool_id'
 						ELSE
 							''
 					END + '
