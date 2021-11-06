@@ -18,7 +18,7 @@ Feedback: mailto:adam@dataeducation.com
 Updates: http://whoisactive.com
 Blog: http://dataeducation.com
 
-License: 
+License:
 	https://github.com/amachanic/sp_whoisactive/blob/master/LICENSE
 *********************************************************************************************/
 ALTER PROC dbo.sp_WhoIsActive
@@ -64,7 +64,7 @@ ALTER PROC dbo.sp_WhoIsActive
 	--Get information on active tasks, based on three interest levels
 	--Level 0 does not pull any task-related information
 	--Level 1 is a lightweight mode that pulls the top non-CXPACKET wait, giving preference to blockers
-	--Level 2 pulls all available task-based metrics, including: 
+	--Level 2 pulls all available task-based metrics, including:
 	--number of active tasks, current wait stats, physical I/O, context switches, and blocker information
 	@get_task_info TINYINT = 1,
 
@@ -76,15 +76,15 @@ ALTER PROC dbo.sp_WhoIsActive
 	@get_avg_time BIT = 0,
 
 	--Get additional non-performance-related information about the session or request
-	--text_size, language, date_format, date_first, quoted_identifier, arithabort, ansi_null_dflt_on, 
-	--ansi_defaults, ansi_warnings, ansi_padding, ansi_nulls, concat_null_yields_null, 
+	--text_size, language, date_format, date_first, quoted_identifier, arithabort, ansi_null_dflt_on,
+	--ansi_defaults, ansi_warnings, ansi_padding, ansi_nulls, concat_null_yields_null,
 	--transaction_isolation_level, lock_timeout, deadlock_priority, row_count, command_type
 	--
 	--If a SQL Agent job is running, an subnode called agent_info will be populated with some or all of
 	--the following: job_id, job_name, step_id, step_name, msdb_query_error (in the event of an error)
 	--
 	--If @get_task_info is set to 2 and a lock wait is detected, a subnode called block_info will be
-	--populated with some or all of the following: lock_type, database_name, object_id, file_id, hobt_id, 
+	--populated with some or all of the following: lock_type, database_name, object_id, file_id, hobt_id,
 	--applock_hash, metadata_resource, metadata_class_id, object_name, schema_name
 	@get_additional_info BIT = 0,
 
@@ -92,7 +92,7 @@ ALTER PROC dbo.sp_WhoIsActive
 	--to appear: requested_memory, granted_memory, max_used_memory, and memory_grant_info.
 	@get_memory_grant_info BIT = 0,
 
-	--Walk the blocking chain and count the number of 
+	--Walk the blocking chain and count the number of
 	--total SPIDs blocked all the way down by a given session
 	--Also enables task_info Level 1, if @get_task_info is set to 0
 	@find_block_leaders BIT = 0,
@@ -102,8 +102,8 @@ ALTER PROC dbo.sp_WhoIsActive
 	@delta_interval TINYINT = 0,
 
 	--List of desired output columns, in desired order
-	--Note that the final output will be the intersection of all enabled features and all 
-	--columns in the list. Therefore, only columns associated with enabled features will 
+	--Note that the final output will be the intersection of all enabled features and all
+	--columns in the list. Therefore, only columns associated with enabled features will
 	--actually appear in the output. Likewise, removing columns from this list may effectively
 	--disable features, even if they are turned on
 	--
@@ -112,17 +112,17 @@ ALTER PROC dbo.sp_WhoIsActive
 	--allowed, as long as the list contains exact matches of delimited valid column names.
 	@output_column_list VARCHAR(8000) = '[dd%][session_id][sql_text][sql_command][login_name][wait_info][tasks][tran_log%][cpu%][temp%][block%][reads%][writes%][context%][physical%][query_plan][locks][%]',
 
-	--Column(s) by which to sort output, optionally with sort directions. 
+	--Column(s) by which to sort output, optionally with sort directions.
 		--Valid column choices:
-		--session_id, physical_io, reads, physical_reads, writes, tempdb_allocations, 
-		--tempdb_current, CPU, context_switches, used_memory, physical_io_delta, reads_delta, 
-		--physical_reads_delta, writes_delta, tempdb_allocations_delta, tempdb_current_delta, 
-		--CPU_delta, context_switches_delta, used_memory_delta, tasks, tran_start_time, 
-		--open_tran_count, blocking_session_id, blocked_session_count, percent_complete, 
+		--session_id, physical_io, reads, physical_reads, writes, tempdb_allocations,
+		--tempdb_current, CPU, context_switches, used_memory, physical_io_delta, reads_delta,
+		--physical_reads_delta, writes_delta, tempdb_allocations_delta, tempdb_current_delta,
+		--CPU_delta, context_switches_delta, used_memory_delta, tasks, tran_start_time,
+		--open_tran_count, blocking_session_id, blocked_session_count, percent_complete,
 		--host_name, login_name, database_name, start_time, login_time, program_name
 		--
 		--Note that column names in the list must be bracket-delimited. Commas and/or white
-		--space are not required. 
+		--space are not required.
 	@sort_order VARCHAR(500) = '[start_time] ASC',
 
 	--Formats some of the output columns in a more "human readable" form
@@ -131,16 +131,16 @@ ALTER PROC dbo.sp_WhoIsActive
 	--2 formats the output for fixed-width fonts
 	@format_output TINYINT = 1,
 
-	--If set to a non-blank value, the script will attempt to insert into the specified 
-	--destination table. Please note that the script will not verify that the table exists, 
+	--If set to a non-blank value, the script will attempt to insert into the specified
+	--destination table. Please note that the script will not verify that the table exists,
 	--or that it has the correct schema, before doing the insert.
 	--Table can be specified in one, two, or three-part format
 	@destination_table VARCHAR(4000) = '',
 
 	--If set to 1, no data collection will happen and no result set will be returned; instead,
-	--a CREATE TABLE statement will be returned via the @schema parameter, which will match 
+	--a CREATE TABLE statement will be returned via the @schema parameter, which will match
 	--the schema of the result set that would be returned by using the same collection of the
-	--rest of the parameters. The CREATE TABLE statement will have a placeholder token of 
+	--rest of the parameters. The CREATE TABLE statement will have a placeholder token of
 	--<table_name> in place of an actual table name.
 	@return_schema BIT = 0,
 	@schema VARCHAR(MAX) = NULL OUTPUT,
@@ -227,43 +227,43 @@ Non-Formatted:	[granted_memory] [bigint] NULL
 Formatted:		[physical_io_delta] [varchar](30) NULL
 Non-Formatted:	[physical_io_delta] [bigint] NULL
 	(Requires @delta_interval option)
-	Difference between the number of physical I/Os reported on the first and second collections. 
+	Difference between the number of physical I/Os reported on the first and second collections.
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[reads_delta] [varchar](30) NULL
 Non-Formatted:	[reads_delta] [bigint] NULL
 	(Requires @delta_interval option)
-	Difference between the number of reads reported on the first and second collections. 
+	Difference between the number of reads reported on the first and second collections.
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[physical_reads_delta] [varchar](30) NULL
 Non-Formatted:	[physical_reads_delta] [bigint] NULL
 	(Requires @delta_interval option)
-	Difference between the number of physical reads reported on the first and second collections. 
+	Difference between the number of physical reads reported on the first and second collections.
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[writes_delta] [varchar](30) NULL
 Non-Formatted:	[writes_delta] [bigint] NULL
 	(Requires @delta_interval option)
-	Difference between the number of writes reported on the first and second collections. 
+	Difference between the number of writes reported on the first and second collections.
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[tempdb_allocations_delta] [varchar](30) NULL
 Non-Formatted:	[tempdb_allocations_delta] [bigint] NULL
 	(Requires @delta_interval option)
-	Difference between the number of TempDB writes reported on the first and second collections. 
+	Difference between the number of TempDB writes reported on the first and second collections.
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[tempdb_current_delta] [varchar](30) NULL
 Non-Formatted:	[tempdb_current_delta] [bigint] NULL
 	(Requires @delta_interval option)
-	Difference between the number of allocated TempDB pages reported on the first and second 
+	Difference between the number of allocated TempDB pages reported on the first and second
 	collections. If the request started after the first collection, the value will be NULL
 
 Formatted:		[CPU_delta] [varchar](30) NULL
 Non-Formatted:	[CPU_delta] [int] NULL
 	(Requires @delta_interval option)
-	Difference between the CPU time reported on the first and second collections. 
+	Difference between the CPU time reported on the first and second collections.
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[context_switches_delta] [varchar](30) NULL
@@ -294,22 +294,22 @@ Formatted/Non:	[wait_info] [nvarchar](4000) NULL
 		(Ax: Bms/Cms/Dms)E
 	A is the number of waiting tasks currently waiting on resource type E. B/C/D are wait
 	times, in milliseconds. If only one thread is waiting, its wait time will be shown as B.
-	If two tasks are waiting, each of their wait times will be shown (B/C). If three or more 
+	If two tasks are waiting, each of their wait times will be shown (B/C). If three or more
 	tasks are waiting, the minimum, average, and maximum wait times will be shown (B/C/D).
-	If wait type E is a page latch wait and the page is of a "special" type (e.g. PFS, GAM, SGAM), 
+	If wait type E is a page latch wait and the page is of a "special" type (e.g. PFS, GAM, SGAM),
 	the page type will be identified.
-	If wait type E is CXPACKET, CXCONSUMER, CXSYNC_PORT, or CXSYNC_CONSUMER the nodeId from the 
+	If wait type E is CXPACKET, CXCONSUMER, CXSYNC_PORT, or CXSYNC_CONSUMER the nodeId from the
 	query plan will be identified
 
 Formatted/Non:	[locks] [xml] NULL
 	(Requires @get_locks option)
 	Aggregates lock information, in XML format.
-	The lock XML includes the lock mode, locked object, and aggregates the number of requests. 
+	The lock XML includes the lock mode, locked object, and aggregates the number of requests.
 	Attempts are made to identify locked objects by name
 
 Formatted/Non:	[tran_start_time] [datetime] NULL
 	(Requires @get_transaction_info option)
-	Date and time that the first transaction opened by a session caused a transaction log 
+	Date and time that the first transaction opened by a session caused a transaction log
 	write to occur.
 
 Formatted/Non:	[tran_log_writes] [nvarchar](4000) NULL
@@ -327,7 +327,7 @@ Non-Formatted:	[open_tran_count] [smallint] NULL
 Formatted:		[sql_command] [xml] NULL
 Non-Formatted:	[sql_command] [nvarchar](max) NULL
 	(Requires @get_outer_command option)
-	Shows the "outer" SQL command, i.e. the text of the batch or RPC sent to the server, 
+	Shows the "outer" SQL command, i.e. the text of the batch or RPC sent to the server,
 	if available
 
 Formatted:		[sql_text] [xml] NULL
@@ -397,24 +397,24 @@ Formatted/Non:	[collection_time] [datetime] NOT NULL
 Formatted/Non:	[memory_grant_info] [xml] NULL
 	(Requires @get_memory_grant_info)
 	Returns memory grant information from several key DMVs
-	in an XML format. The fields presented are: 
-	[request_time], [grant_time], [wait_time_ms], [requested_memory_kb], 
-	[granted_memory_kb], [used_memory_kb], [max_used_memory_kb], [ideal_memory_kb], 
-	[required_memory_kb], [queue_id], [wait_order], [is_next_candidate], [dop], 
-	[query_subtree_cost], [timeout_error_count], [target_memory_mb], 
-	[max_target_memory_kb], [total_memory_kb], [available_memory_kb], 
-	[granted_memory_kb], [used_memory_kb], [grantee_count], [waiter_count], 
-	[request_max_memory_grant_percent], [request_max_cpu_time_sec], 
-	[request_memory_grant_timeout_sec], [max_dop], [min_memory_percent], 
+	in an XML format. The fields presented are:
+	[request_time], [grant_time], [wait_time_ms], [requested_memory_kb],
+	[granted_memory_kb], [used_memory_kb], [max_used_memory_kb], [ideal_memory_kb],
+	[required_memory_kb], [queue_id], [wait_order], [is_next_candidate], [dop],
+	[query_subtree_cost], [timeout_error_count], [target_memory_mb],
+	[max_target_memory_kb], [total_memory_kb], [available_memory_kb],
+	[granted_memory_kb], [used_memory_kb], [grantee_count], [waiter_count],
+	[request_max_memory_grant_percent], [request_max_cpu_time_sec],
+	[request_memory_grant_timeout_sec], [max_dop], [min_memory_percent],
 	[max_memory_percent], [min_cpu_percent], [max_cpu_percent]
 */
 AS
 BEGIN;
 
-	DECLARE @sql_version INT 
+	DECLARE @sql_version INT
 	SET @sql_version = CONVERT(INT, LEFT(REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)), '.', ''), 7))
 
-	SET NOCOUNT ON; 
+	SET NOCOUNT ON;
 	SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 	SET QUOTED_IDENTIFIER ON;
 	SET ANSI_PADDING ON;
@@ -508,12 +508,12 @@ BEGIN;
 
 	IF @help = 1
 	BEGIN;
-		DECLARE 
+		DECLARE
 			@header VARCHAR(MAX),
 			@params VARCHAR(MAX),
 			@outputs VARCHAR(MAX);
 
-		SELECT 
+		SELECT
 			@header =
 				REPLACE
 				(
@@ -524,7 +524,7 @@ BEGIN;
 							VARCHAR(MAX),
 							SUBSTRING
 							(
-								t.text, 
+								t.text,
 								CHARINDEX('/' + REPLICATE('*', 93), t.text) + 94,
 								CHARINDEX(REPLICATE('*', 93) + '/', t.text) - (CHARINDEX('/' + REPLICATE('*', 93), t.text) + 94)
 							)
@@ -546,8 +546,8 @@ BEGIN;
 								VARCHAR(MAX),
 								SUBSTRING
 								(
-									t.text, 
-									CHARINDEX('--~', t.text) + 5, 
+									t.text,
+									CHARINDEX('--~', t.text) + 5,
 									CHARINDEX('--~', t.text, CHARINDEX('--~', t.text) + 5) - (CHARINDEX('--~', t.text) + 5)
 								)
 							),
@@ -557,7 +557,7 @@ BEGIN;
 						'	',
 						''
 					),
-				@outputs = 
+				@outputs =
 					CHAR(13) +
 						REPLACE
 						(
@@ -570,7 +570,7 @@ BEGIN;
 										VARCHAR(MAX),
 										SUBSTRING
 										(
-											t.text, 
+											t.text,
 											CHARINDEX('OUTPUT COLUMNS'+CHAR(13)+CHAR(10)+'--------------', t.text) + 32,
 											CHARINDEX('*/', t.text, CHARINDEX('OUTPUT COLUMNS'+CHAR(13)+CHAR(10)+'--------------', t.text) + 32) - (CHARINDEX('OUTPUT COLUMNS'+CHAR(13)+CHAR(10)+'--------------', t.text) + 32)
 										)
@@ -649,7 +649,7 @@ BEGIN;
 		),
 		tokens AS
 		(
-			SELECT 
+			SELECT
 				RTRIM(LTRIM(
 					SUBSTRING
 					(
@@ -661,14 +661,14 @@ BEGIN;
 				number,
 				CASE
 					WHEN SUBSTRING(@params, number + 1, 1) = CHAR(13) THEN number
-					ELSE COALESCE(NULLIF(CHARINDEX(',' + CHAR(13) + CHAR(13), @params, number), 0), LEN(@params)) 
+					ELSE COALESCE(NULLIF(CHARINDEX(',' + CHAR(13) + CHAR(13), @params, number), 0), LEN(@params))
 				END AS param_group,
 				ROW_NUMBER() OVER
 				(
 					PARTITION BY
 						CHARINDEX(',' + CHAR(13) + CHAR(13), @params, number),
 						SUBSTRING(@params, number+1, 1)
-					ORDER BY 
+					ORDER BY
 						number
 				) AS group_order
 			FROM numbers
@@ -696,9 +696,9 @@ BEGIN;
 				group_order
 			FROM tokens
 			WHERE
-				NOT 
+				NOT
 				(
-					token = '' 
+					token = ''
 					AND group_order > 1
 				)
 			GROUP BY
@@ -717,7 +717,7 @@ BEGIN;
 			END AS [------description-----------------------------------------------------------------------------------------------------]
 		FROM parsed_tokens
 		ORDER BY
-			param_group, 
+			param_group,
 			group_order;
 		
 		WITH
@@ -744,15 +744,15 @@ BEGIN;
 		),
 		tokens AS
 		(
-			SELECT 
+			SELECT
 				RTRIM(LTRIM(
 					SUBSTRING
 					(
 						@outputs,
 						number + 1,
 						CASE
-							WHEN 
-								COALESCE(NULLIF(CHARINDEX(CHAR(13) + 'Formatted', @outputs, number + 1), 0), LEN(@outputs)) < 
+							WHEN
+								COALESCE(NULLIF(CHARINDEX(CHAR(13) + 'Formatted', @outputs, number + 1), 0), LEN(@outputs)) <
 								COALESCE(NULLIF(CHARINDEX(CHAR(13) + CHAR(255) COLLATE Latin1_General_Bin2, @outputs, number + 1), 0), LEN(@outputs))
 								THEN COALESCE(NULLIF(CHARINDEX(CHAR(13) + 'Formatted', @outputs, number + 1), 0), LEN(@outputs)) - number - 1
 							ELSE
@@ -764,7 +764,7 @@ BEGIN;
 				COALESCE(NULLIF(CHARINDEX(CHAR(13) + 'Formatted', @outputs, number + 1), 0), LEN(@outputs)) AS output_group,
 				ROW_NUMBER() OVER
 				(
-					PARTITION BY 
+					PARTITION BY
 						COALESCE(NULLIF(CHARINDEX(CHAR(13) + 'Formatted', @outputs, number + 1), 0), LEN(@outputs))
 					ORDER BY
 						number
@@ -776,7 +776,7 @@ BEGIN;
 		),
 		output_tokens AS
 		(
-			SELECT 
+			SELECT
 				*,
 				CASE output_group_order
 					WHEN 2 THEN MAX(CASE output_group_order WHEN 1 THEN token ELSE NULL END) OVER (PARTITION BY output_group)
@@ -787,7 +787,7 @@ BEGIN;
 		SELECT
 			CASE output_group_order
 				WHEN 1 THEN '-----------------------------------'
-				WHEN 2 THEN 
+				WHEN 2 THEN
 					CASE
 						WHEN CHARINDEX('Formatted/Non:', column_info) = 1 THEN
 							SUBSTRING(column_info, CHARINDEX(CHAR(255) COLLATE Latin1_General_Bin2, column_info)+1, CHARINDEX(']', column_info, CHARINDEX(CHAR(255) COLLATE Latin1_General_Bin2, column_info)+2) - CHARINDEX(CHAR(255) COLLATE Latin1_General_Bin2, column_info))
@@ -798,7 +798,7 @@ BEGIN;
 			END AS formatted_column_name,
 			CASE output_group_order
 				WHEN 1 THEN '-----------------------------------'
-				WHEN 2 THEN 
+				WHEN 2 THEN
 					CASE
 						WHEN CHARINDEX('Formatted/Non:', column_info) = 1 THEN
 							SUBSTRING(column_info, CHARINDEX(']', column_info)+2, LEN(column_info))
@@ -809,7 +809,7 @@ BEGIN;
 			END AS formatted_column_type,
 			CASE output_group_order
 				WHEN 1 THEN '---------------------------------------'
-				WHEN 2 THEN 
+				WHEN 2 THEN
 					CASE
 						WHEN CHARINDEX('Formatted/Non:', column_info) = 1 THEN ''
 						ELSE
@@ -824,7 +824,7 @@ BEGIN;
 			END AS unformatted_column_name,
 			CASE output_group_order
 				WHEN 1 THEN '---------------------------------------'
-				WHEN 2 THEN 
+				WHEN 2 THEN
 					CASE
 						WHEN CHARINDEX('Formatted/Non:', column_info) = 1 THEN ''
 						ELSE
@@ -842,9 +842,9 @@ BEGIN;
 			END AS [------description-----------------------------------------------------------------------------------------------------]
 		FROM output_tokens
 		WHERE
-			NOT 
+			NOT
 			(
-				output_group_order = 1 
+				output_group_order = 1
 				AND output_group = LEN(@outputs)
 			)
 		ORDER BY
@@ -881,7 +881,7 @@ BEGIN;
 	),
 	tokens AS
 	(
-		SELECT 
+		SELECT
 			'|[' +
 				SUBSTRING
 				(
@@ -1075,9 +1075,9 @@ BEGIN;
 			UNION ALL
 			SELECT '[max_used_memory_delta]', 23
 			WHERE
-				@delta_interval > 0 
+				@delta_interval > 0
 				AND @get_memory_grant_info = 1
-		) AS x ON 
+		) AS x ON
 			x.column_name LIKE token ESCAPE '|'
 	)
 	SELECT
@@ -1108,7 +1108,7 @@ BEGIN;
 	
 	IF @destination_table <> ''
 	BEGIN;
-		SET @destination_table = 
+		SET @destination_table =
 			--database
 			COALESCE(QUOTENAME(PARSENAME(@destination_table, 3)) + '.', '') +
 			--schema
@@ -1147,7 +1147,7 @@ BEGIN;
 	),
 	tokens AS
 	(
-		SELECT 
+		SELECT
 			'|[' +
 				SUBSTRING
 				(
@@ -1255,7 +1255,7 @@ BEGIN;
 			SELECT '[login_time]'
 			UNION ALL
 			SELECT '[program_name]'
-		) AS x ON 
+		) AS x ON
 			x.column_name LIKE token ESCAPE '|'
 	)
 	SELECT
@@ -1299,9 +1299,9 @@ BEGIN;
 		CPU BIGINT NULL,
 		thread_CPU_snapshot BIGINT NULL,
 		context_switches BIGINT NULL,
-		used_memory BIGINT NOT NULL, 
+		used_memory BIGINT NOT NULL,
 		max_used_memory BIGINT NULL,
-		requested_memory BIGINT NULL, 
+		requested_memory BIGINT NULL,
 		granted_memory BIGINT NULL,
 		tasks SMALLINT NULL,
 		status VARCHAR(30) NOT NULL,
@@ -1355,7 +1355,7 @@ BEGIN;
 		WITH SAMPLE 0 ROWS, NORECOMPUTE;
 
 		DECLARE @recursion SMALLINT;
-		SET @recursion = 
+		SET @recursion =
 			CASE @delta_interval
 				WHEN 0 THEN 1
 				ELSE -1
@@ -1369,8 +1369,8 @@ BEGIN;
 		--Used for the delta pull
 		REDO:;
 		
-		IF 
-			@get_locks = 1 
+		IF
+			@get_locks = 1
 			AND @recursion = 1
 			AND @output_column_list LIKE '%|[locks|]%' ESCAPE '|'
 		BEGIN;
@@ -1416,7 +1416,7 @@ BEGIN;
 				(
 					SELECT TOP(1)
 						CASE
-							WHEN 
+							WHEN
 							(
 								sp.hostprocess > ''
 								OR r.total_elapsed_time < 0
@@ -1425,8 +1425,8 @@ BEGIN;
 							ELSE
 								DATEADD
 								(
-									ms, 
-									1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())), 
+									ms,
+									1000 * (DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())) / 500) - DATEPART(ms, DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())),
 									DATEADD(second, -(r.total_elapsed_time / 1000), GETDATE())
 								)
 						END AS start_time
@@ -1507,12 +1507,12 @@ BEGIN;
 								END
 							ELSE 0
 						END
-					AND 
+					AND
 					(
 						@show_own_spid = 1
 						OR sp.spid <> @@SPID
 					)
-					AND 
+					AND
 					(
 						@show_system_spids = 1
 						OR sp.hostprocess > ''
@@ -1567,15 +1567,15 @@ BEGIN;
 									(
 										SUBSTRING
 										(
-											tl.resource_description, 
-											(CHARINDEX('object_id = ', tl.resource_description) + 12), 
+											tl.resource_description,
+											(CHARINDEX('object_id = ', tl.resource_description) + 12),
 											COALESCE
 											(
 												NULLIF
 												(
 													CHARINDEX(',', tl.resource_description, CHARINDEX('object_id = ', tl.resource_description) + 12),
 													0
-												), 
+												),
 												DATALENGTH(tl.resource_description)+1
 											) - (CHARINDEX('object_id = ', tl.resource_description) + 12)
 										)
@@ -1586,7 +1586,7 @@ BEGIN;
 						CONVERT
 						(
 							INT,
-							CASE 
+							CASE
 								WHEN tl.resource_type = 'FILE' THEN CONVERT(INT, tl.resource_description)
 								WHEN tl.resource_type IN ('PAGE', 'EXTENT', 'RID') THEN LEFT(tl.resource_description, CHARINDEX(':', tl.resource_description)-1)
 								ELSE NULL
@@ -1596,18 +1596,18 @@ BEGIN;
 						(
 							INT,
 							CASE
-								WHEN tl.resource_type IN ('PAGE', 'EXTENT', 'RID') THEN 
+								WHEN tl.resource_type IN ('PAGE', 'EXTENT', 'RID') THEN
 									SUBSTRING
 									(
-										tl.resource_description, 
-										CHARINDEX(':', tl.resource_description) + 1, 
+										tl.resource_description,
+										CHARINDEX(':', tl.resource_description) + 1,
 										COALESCE
 										(
 											NULLIF
 											(
-												CHARINDEX(':', tl.resource_description, CHARINDEX(':', tl.resource_description) + 1), 
+												CHARINDEX(':', tl.resource_description, CHARINDEX(':', tl.resource_description) + 1),
 												0
-											), 
+											),
 											DATALENGTH(tl.resource_description)+1
 										) - (CHARINDEX(':', tl.resource_description) + 1)
 									)
@@ -1627,27 +1627,27 @@ BEGIN;
 							INT,
 							CASE
 								WHEN
-									/*TODO: Deal with server principals*/ 
-									tl.resource_subtype <> 'SERVER_PRINCIPAL' 
+									/*TODO: Deal with server principals*/
+									tl.resource_subtype <> 'SERVER_PRINCIPAL'
 									AND tl.resource_description LIKE '%index_id or stats_id = %' THEN
 									(
 										SUBSTRING
 										(
-											tl.resource_description, 
-											(CHARINDEX('index_id or stats_id = ', tl.resource_description) + 23), 
+											tl.resource_description,
+											(CHARINDEX('index_id or stats_id = ', tl.resource_description) + 23),
 											COALESCE
 											(
 												NULLIF
 												(
-													CHARINDEX(',', tl.resource_description, CHARINDEX('index_id or stats_id = ', tl.resource_description) + 23), 
+													CHARINDEX(',', tl.resource_description, CHARINDEX('index_id or stats_id = ', tl.resource_description) + 23),
 													0
-												), 
+												),
 												DATALENGTH(tl.resource_description)+1
 											) - (CHARINDEX('index_id or stats_id = ', tl.resource_description) + 23)
 										)
 									)
 								ELSE NULL
-							END 
+							END
 						) AS index_id,
 						CONVERT
 						(
@@ -1657,21 +1657,21 @@ BEGIN;
 									(
 										SUBSTRING
 										(
-											tl.resource_description, 
-											(CHARINDEX('schema_id = ', tl.resource_description) + 12), 
+											tl.resource_description,
+											(CHARINDEX('schema_id = ', tl.resource_description) + 12),
 											COALESCE
 											(
 												NULLIF
 												(
-													CHARINDEX(',', tl.resource_description, CHARINDEX('schema_id = ', tl.resource_description) + 12), 
+													CHARINDEX(',', tl.resource_description, CHARINDEX('schema_id = ', tl.resource_description) + 12),
 													0
-												), 
+												),
 												DATALENGTH(tl.resource_description)+1
 											) - (CHARINDEX('schema_id = ', tl.resource_description) + 12)
 										)
 									)
 								ELSE NULL
-							END 
+							END
 						) AS schema_id,
 						CONVERT
 						(
@@ -1681,15 +1681,15 @@ BEGIN;
 									(
 										SUBSTRING
 										(
-											tl.resource_description, 
-											(CHARINDEX('principal_id = ', tl.resource_description) + 15), 
+											tl.resource_description,
+											(CHARINDEX('principal_id = ', tl.resource_description) + 15),
 											COALESCE
 											(
 												NULLIF
 												(
-													CHARINDEX(',', tl.resource_description, CHARINDEX('principal_id = ', tl.resource_description) + 15), 
+													CHARINDEX(',', tl.resource_description, CHARINDEX('principal_id = ', tl.resource_description) + 15),
 													0
-												), 
+												),
 												DATALENGTH(tl.resource_description)+1
 											) - (CHARINDEX('principal_id = ', tl.resource_description) + 15)
 										)
@@ -1706,9 +1706,9 @@ BEGIN;
 						RTRIM(tl.resource_description) AS resource_description,
 						tl.resource_associated_entity_id
 						/*********************************************/
-					FROM 
+					FROM
 					(
-						SELECT 
+						SELECT
 							request_session_id,
 							CONVERT(VARCHAR(120), resource_type) COLLATE Latin1_General_Bin2 AS resource_type,
 							CONVERT(VARCHAR(120), resource_subtype) COLLATE Latin1_General_Bin2 AS resource_subtype,
@@ -1792,8 +1792,8 @@ BEGIN;
 			WITH SAMPLE 0 ROWS, NORECOMPUTE;
 		END;
 		
-		DECLARE 
-			@sql VARCHAR(MAX), 
+		DECLARE
+			@sql VARCHAR(MAX),
 			@sql_n NVARCHAR(MAX),
 			@core_session_join VARCHAR(MAX) =
 				'@sessions AS sp
@@ -1817,7 +1817,7 @@ BEGIN;
 						)
 					) ';
 
-		SET @sql = 
+		SET @sql =
 			CONVERT(VARCHAR(MAX), '') +
 			'DECLARE @blocker BIT;
 			SET @blocker = 0;
@@ -1839,19 +1839,19 @@ BEGIN;
 				program_name NVARCHAR(128),
 				database_id SMALLINT,
 				memory_usage INT,
-				open_tran_count SMALLINT, 
+				open_tran_count SMALLINT,
 				' +
 				CASE
-					WHEN 
+					WHEN
 					(
-						@get_task_info <> 0 
-						OR @find_block_leaders = 1 
+						@get_task_info <> 0
+						OR @find_block_leaders = 1
 					) THEN
 						'wait_type NVARCHAR(32),
 						wait_resource NVARCHAR(256),
-						wait_time BIGINT, 
+						wait_time BIGINT,
 						'
-					ELSE 
+					ELSE
 						''
 				END +
 				'blocked SMALLINT,
@@ -1882,24 +1882,24 @@ BEGIN;
 				program_name,
 				database_id,
 				memory_usage,
-				open_tran_count, 
+				open_tran_count,
 				' +
 				CASE
-					WHEN 
+					WHEN
 					(
 						@get_task_info <> 0
-						OR @find_block_leaders = 1 
+						OR @find_block_leaders = 1
 					) THEN
 						'wait_type,
 						wait_resource,
-						wait_time, 
+						wait_time,
 						'
 					ELSE
 						''
 				END +
 				'blocked,
 				is_user_process,
-				cmd 
+				cmd
 			)
 			SELECT TOP(@i)
 				spy.session_id,
@@ -1918,10 +1918,10 @@ BEGIN;
 				spy.open_tran_count,
 				' +
 				CASE
-					WHEN 
+					WHEN
 					(
-						@get_task_info <> 0  
-						OR @find_block_leaders = 1 
+						@get_task_info <> 0
+						OR @find_block_leaders = 1
 					) THEN
 						'spy.wait_type,
 						CASE
@@ -1934,7 +1934,7 @@ BEGIN;
 							ELSE
 								NULL
 						END AS wait_resource,
-						spy.wait_time, 
+						spy.wait_time,
 						'
 					ELSE
 						''
@@ -1945,13 +1945,13 @@ BEGIN;
 			FROM
 			(
 				SELECT TOP(@i)
-					spx.*, 
+					spx.*,
 					' +
 					CASE
-						WHEN 
+						WHEN
 						(
-							@get_task_info <> 0 
-							OR @find_block_leaders = 1 
+							@get_task_info <> 0
+							OR @find_block_leaders = 1
 						) THEN
 							'ROW_NUMBER() OVER
 							(
@@ -1960,17 +1960,17 @@ BEGIN;
 									spx.request_id
 								ORDER BY
 									CASE
-										WHEN spx.wait_type LIKE N''LCK[_]%'' THEN 
+										WHEN spx.wait_type LIKE N''LCK[_]%'' THEN
 											1
 										ELSE
 											99
 									END,
 									spx.wait_time DESC,
 									spx.blocked DESC
-							) AS r 
+							) AS r
 							'
-						ELSE 
-							'1 AS r 
+						ELSE
+							'1 AS r
 							'
 					END +
 				'FROM
@@ -1999,13 +1999,13 @@ BEGIN;
 						sp0.program_name,
 						sp0.database_id,
 						sp0.memory_usage,
-						sp0.open_tran_count, 
+						sp0.open_tran_count,
 						' +
 						CASE
-							WHEN 
+							WHEN
 							(
-								@get_task_info <> 0 
-								OR @find_block_leaders = 1 
+								@get_task_info <> 0
+								OR @find_block_leaders = 1
 							) THEN
 								'CASE
 									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
@@ -2014,7 +2014,7 @@ BEGIN;
 										NULL
 								END AS wait_type,
 								CASE
-									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN 
+									WHEN sp0.wait_time > 0 AND sp0.wait_type NOT IN (N''CXPACKET'', N''CXCONSUMER'', N''CXSYNC_PORT'', N''CXSYNC_CONSUMER'') THEN
 										sp0.wait_resource
 									ELSE
 										NULL
@@ -2024,7 +2024,7 @@ BEGIN;
 										sp0.wait_time
 									ELSE
 										0
-								END AS wait_time, 
+								END AS wait_time,
 								'
 							ELSE
 								''
@@ -2154,15 +2154,15 @@ BEGIN;
 									AND @blocker = 0
 								)
 							' +
-							CASE 
-								WHEN 
+							CASE
+								WHEN
 								(
-									@get_task_info = 0 
+									@get_task_info = 0
 									AND @find_block_leaders = 0
 								) THEN
 									'WHERE
-										sp2.ecid = 0 
-									' 
+										sp2.ecid = 0
+									'
 								ELSE
 									''
 							END +
@@ -2182,7 +2182,7 @@ BEGIN;
 					WHERE
 						@blocker = 1
 						OR
-						(1=1 
+						(1=1
 						' +
 							--inclusive filter
 							CASE
@@ -2191,22 +2191,22 @@ BEGIN;
 										WHEN 'session' THEN
 											CASE
 												WHEN CONVERT(SMALLINT, @filter) <> 0 THEN
-													'AND sp0.session_id = CONVERT(SMALLINT, @filter) 
+													'AND sp0.session_id = CONVERT(SMALLINT, @filter)
 													'
 												ELSE
 													''
 											END
 										WHEN 'program' THEN
-											'AND sp0.program_name LIKE @filter 
+											'AND sp0.program_name LIKE @filter
 											'
 										WHEN 'login' THEN
-											'AND sp0.login_name LIKE @filter 
+											'AND sp0.login_name LIKE @filter
 											'
 										WHEN 'host' THEN
-											'AND sp0.host_name LIKE @filter 
+											'AND sp0.host_name LIKE @filter
 											'
 										WHEN 'database' THEN
-											'AND DB_NAME(sp0.database_id) LIKE @filter 
+											'AND DB_NAME(sp0.database_id) LIKE @filter
 											'
 										ELSE
 											''
@@ -2221,22 +2221,22 @@ BEGIN;
 										WHEN 'session' THEN
 											CASE
 												WHEN CONVERT(SMALLINT, @not_filter) <> 0 THEN
-													'AND sp0.session_id <> CONVERT(SMALLINT, @not_filter) 
+													'AND sp0.session_id <> CONVERT(SMALLINT, @not_filter)
 													'
 												ELSE
 													''
 											END
 										WHEN 'program' THEN
-											'AND sp0.program_name NOT LIKE @not_filter 
+											'AND sp0.program_name NOT LIKE @not_filter
 											'
 										WHEN 'login' THEN
-											'AND sp0.login_name NOT LIKE @not_filter 
+											'AND sp0.login_name NOT LIKE @not_filter
 											'
 										WHEN 'host' THEN
-											'AND sp0.host_name NOT LIKE @not_filter 
+											'AND sp0.host_name NOT LIKE @not_filter
 											'
 										WHEN 'database' THEN
-											'AND DB_NAME(sp0.database_id) NOT LIKE @not_filter 
+											'AND DB_NAME(sp0.database_id) NOT LIKE @not_filter
 											'
 										ELSE
 											''
@@ -2248,19 +2248,19 @@ BEGIN;
 								WHEN 1 THEN
 									''
 								ELSE
-									'AND sp0.session_id <> @@spid 
+									'AND sp0.session_id <> @@spid
 									'
 							END +
-							CASE 
+							CASE
 								WHEN @show_system_spids = 0 THEN
-									'AND sp0.hostprocess > '''' 
-									' 
+									'AND sp0.hostprocess > ''''
+									'
 								ELSE
 									''
 							END +
 							CASE @show_sleeping_spids
 								WHEN 0 THEN
-									'AND sp0.status <> ''sleeping'' 
+									'AND sp0.status <> ''sleeping''
 									'
 								WHEN 1 THEN
 									'AND
@@ -2276,10 +2276,10 @@ BEGIN;
 				) AS spx
 			) AS spy
 			WHERE
-				spy.r = 1; 
-			' + 
+				spy.r = 1;
+			' +
 			CASE @recursion
-				WHEN 1 THEN 
+				WHEN 1 THEN
 					'IF @@ROWCOUNT > 0
 					BEGIN;
 						INSERT @blockers
@@ -2296,7 +2296,7 @@ BEGIN;
 
 						SELECT TOP(@i)
 							session_id
-						FROM @sessions; 
+						FROM @sessions;
 						' +
 
 						CASE
@@ -2309,14 +2309,14 @@ BEGIN;
 								BEGIN;
 									SET @blocker = 1;
 									GOTO BLOCKERS;
-								END; 
+								END;
 								'
-							ELSE 
+							ELSE
 								''
 						END +
-					'END; 
+					'END;
 					'
-				ELSE 
+				ELSE
 					''
 			END +
 			'SELECT TOP(@i)
@@ -2464,11 +2464,11 @@ BEGIN;
 								END
 					ELSE
 						'0 '
-				END + 
+				END +
 					'AS used_memory,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[max_used_memory|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[max_used_memory_delta|]%' ESCAPE '|'
 							THEN
@@ -2565,7 +2565,7 @@ BEGIN;
 					'AS open_tran_count,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|'
 						AND @recursion = 1
 							THEN
@@ -2736,7 +2736,7 @@ BEGIN;
 										x.lock_timeout,
 										x.deadlock_priority,
 										x.row_count,
-										x.command_type, 
+										x.command_type,
 										' +
 										CASE
 											WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
@@ -2787,7 +2787,7 @@ BEGIN;
 										END +
 										CASE
 											WHEN @get_task_info = 2 THEN
-												'CONVERT(XML, x.block_info) AS block_info, 
+												'CONVERT(XML, x.block_info) AS block_info,
 												'
 											ELSE
 												''
@@ -2800,7 +2800,7 @@ BEGIN;
 								) '
 					ELSE
 						'NULL '
-				END + 
+				END +
 					'AS additional_info,
 					' +
 				CASE
@@ -2810,7 +2810,7 @@ BEGIN;
 						(
 							SELECT TOP(@i)
 							(
-								SELECT TOP(@i)	 
+								SELECT TOP(@i)	
 									x.request_time,
 									x.grant_time,
 									x.wait_time_ms,
@@ -2825,8 +2825,8 @@ BEGIN;
 									x.is_next_candidate,
 									x.dop,
 									CAST(x.query_cost AS NUMERIC(38, 4)) AS query_cost
-								FOR XML 
-									PATH(''memory_grant''), 
+								FOR XML
+									PATH(''memory_grant''),
 									TYPE
 							),
 							(
@@ -2840,8 +2840,8 @@ BEGIN;
 									x.rs_used_memory_kb AS used_memory_kb,
 									x.grantee_count,
 									x.waiter_count
-								FOR XML 
-									PATH(''resource_semaphore''), 
+								FOR XML
+									PATH(''resource_semaphore''),
 									TYPE
 							),
 							(
@@ -2851,8 +2851,8 @@ BEGIN;
 									x.request_max_cpu_time_sec,
 									x.request_memory_grant_timeout_sec,
 									x.max_dop
-								FOR XML 
-									PATH(''workload_group''), 
+								FOR XML
+									PATH(''workload_group''),
 									TYPE
 							),
 							(
@@ -2862,19 +2862,19 @@ BEGIN;
 									x.max_memory_percent,
 									x.min_cpu_percent,
 									x.max_cpu_percent
-								FOR XML 
-									PATH(''resource_pool''), 
+								FOR XML
+									PATH(''resource_pool''),
 									TYPE
 							)
-							FOR XML 
-								PATH(''memory_counters''), 
+							FOR XML
+								PATH(''memory_counters''),
 								TYPE
 						)				
 					'
-					ELSE 
+					ELSE
 						'NULL '
-				END + 'AS memory_grant_info, 
-				x.start_time, 
+				END + 'AS memory_grant_info,
+				x.start_time,
 				'
 				+
 				CASE
@@ -2883,10 +2883,10 @@ BEGIN;
 						AND @recursion = 1
 							THEN
 								'x.login_time '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS login_time, 
+				END +
+					'AS login_time,
 				x.last_request_start_time
 			FROM
 			(
@@ -2905,10 +2905,10 @@ BEGIN;
 							ELSE tempdb_info.tempdb_current
 						END,
 						0
-					) AS tempdb_current, 
+					) AS tempdb_current,
 					' +
 					CASE
-						WHEN 
+						WHEN
 							(
 								@get_task_info <> 0
 								OR @find_block_leaders = 1
@@ -2926,12 +2926,12 @@ BEGIN;
 														WHEN
 															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 1 OR
 															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) % 8088 = 0
-																THEN 
+																THEN
 																	N''PFS''
 														WHEN
 															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 2 OR
 															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) % 511232 = 0
-																THEN 
+																THEN
 																	N''GAM''
 														WHEN
 															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 3 OR
@@ -2940,15 +2940,15 @@ BEGIN;
 																	N''SGAM''
 														WHEN
 															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 6 OR
-															(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 6) % 511232 = 0 
-																THEN 
+															(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 6) % 511232 = 0
+																THEN
 																	N''DCM''
 														WHEN
 															CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) = 7 OR
-															(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 7) % 511232 = 0 
-																THEN 
+															(CONVERT(INT, RIGHT(y.resource_description, CHARINDEX(N'':'', REVERSE(y.resource_description)) - 1)) - 7) % 511232 = 0
+																THEN
 																	N''BCM''
-														ELSE 
+														ELSE
 															N''*''
 													END +
 												N'')''
@@ -2973,7 +2973,7 @@ BEGIN;
 														N'':'' + SUBSTRING(y.resource_description, CHARINDEX(N''(SPID='', y.resource_description) + 6, CHARINDEX(N'')'', y.resource_description, (CHARINDEX(N''(SPID='', y.resource_description) + 6)) - (CHARINDEX(N''(SPID='', y.resource_description) + 6)) + '']''
 											ELSE
 												N''''
-										END COLLATE Latin1_General_Bin2 AS sys_wait_info, 
+										END COLLATE Latin1_General_Bin2 AS sys_wait_info,
 										'
 							ELSE
 								''
@@ -3007,8 +3007,8 @@ BEGIN;
 						COALESCE(r.writes, s.writes) AS writes,
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
 						' +
-						CASE 
-							WHEN @get_memory_grant_info = 1 THEN 
+						CASE
+							WHEN @get_memory_grant_info = 1 THEN
 								'sp.memory_usage AS used_memory,
 								mg.used_memory_kb AS mg_used_memory_kb,
 								mg.max_used_memory_kb,
@@ -3179,7 +3179,7 @@ BEGIN;
 						ELSE @core_session_join
 					END + '
 				) AS y
-				' + 
+				' +
 				CASE
 					WHEN @get_task_info = 2 THEN
 						CONVERT(VARCHAR(MAX), '') +
@@ -3276,7 +3276,7 @@ BEGIN;
 																CASE
 																	WHEN min_wait_time <> max_wait_time THEN
 																		CONVERT(NVARCHAR, min_wait_time) + N''/'' + CONVERT(NVARCHAR, avg_wait_time) + N''/'' + CONVERT(NVARCHAR, max_wait_time) + N''ms''
-																	ELSE 
+																	ELSE
 																		CONVERT(NVARCHAR, max_wait_time) + N''ms''
 																END
 														END +
@@ -3328,7 +3328,7 @@ BEGIN;
 													t.session_id,
 													t.request_id,
 													SUM(CONVERT(BIGINT, t.pending_io_count)) OVER (PARTITION BY t.session_id, t.request_id) AS physical_io,
-													SUM(CONVERT(BIGINT, t.context_switches_count)) OVER (PARTITION BY t.session_id, t.request_id) AS context_switches, 
+													SUM(CONVERT(BIGINT, t.context_switches_count)) OVER (PARTITION BY t.session_id, t.request_id) AS context_switches,
 													' +
 													CASE
 														WHEN
@@ -3429,27 +3429,27 @@ BEGIN;
 																			WHEN
 																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) = 1 OR
 																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) % 8088 = 0
-																					THEN 
+																					THEN
 																						N''PFS''
 																			WHEN
 																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) = 2 OR
-																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) % 511232 = 0 
-																					THEN 
+																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) % 511232 = 0
+																					THEN
 																						N''GAM''
 																			WHEN
 																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) = 3 OR
-																				(CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) - 1) % 511232 = 0 
-																					THEN 
+																				(CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) - 1) % 511232 = 0
+																					THEN
 																						N''SGAM''
 																			WHEN
 																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) = 6 OR
-																				(CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) - 6) % 511232 = 0 
-																					THEN 
+																				(CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) - 6) % 511232 = 0
+																					THEN
 																						N''DCM''
 																			WHEN
 																				CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) = 7 OR
 																				(CONVERT(INT, RIGHT(wt.resource_description, CHARINDEX(N'':'', REVERSE(wt.resource_description)) - 1)) - 7) % 511232 = 0
-																					THEN 
+																					THEN
 																						N''BCM''
 																			ELSE
 																				N''*''
@@ -3461,15 +3461,15 @@ BEGIN;
 																		(
 																			wt.resource_description,
 																			CHARINDEX(N''nodeId'', wt.resource_description) + 7,
-																			CASE 
+																			CASE
 																				WHEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description)) > 0
 																			 	THEN CHARINDEX(N'' '', wt.resource_description, CHARINDEX(N''nodeId'', wt.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', wt.resource_description)
-																				ELSE 4 
+																				ELSE 4
 																			END
 																		)
 																WHEN wt.wait_type LIKE N''LATCH[_]%'' THEN
 																	N'' ['' + LEFT(wt.resource_description, COALESCE(NULLIF(CHARINDEX(N'' '', wt.resource_description), 0), LEN(wt.resource_description) + 1) - 1) + N'']''
-																ELSE 
+																ELSE
 																	N''''
 															END COLLATE Latin1_General_Bin2 AS wait_type,
 														CASE
@@ -3612,7 +3612,7 @@ BEGIN;
 								task_nodes.task_node.exist(N''session_id'') = 1
 						) AS tasks ON
 							tasks.session_id = y.session_id
-							AND tasks.request_id = y.request_id 
+							AND tasks.request_id = y.request_id
 						'
 					ELSE
 						''
@@ -3759,7 +3759,7 @@ BEGIN;
 			login_time,
 			last_request_start_time
 		)
-		EXEC sp_executesql 
+		EXEC sp_executesql
 			@sql_n,
 			N'@recursion SMALLINT, @filter sysname, @not_filter sysname, @first_collection_ms_ticks BIGINT',
 			@recursion, @filter, @not_filter, @first_collection_ms_ticks;
@@ -3770,7 +3770,7 @@ BEGIN;
 			AND
 			(
 				@output_column_list LIKE '%|[tran_start_time|]%' ESCAPE '|'
-				OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|' 
+				OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|'
 			)
 		BEGIN;	
 			DECLARE @i INT;
@@ -3809,7 +3809,7 @@ BEGIN;
 							XML,
 							REPLACE
 							(
-								CONVERT(NVARCHAR(MAX), trans_raw.trans_xml_raw) COLLATE Latin1_General_Bin2, 
+								CONVERT(NVARCHAR(MAX), trans_raw.trans_xml_raw) COLLATE Latin1_General_Bin2,
 								N'</trans_info></trans><trans><trans_info>', N''
 							)
 						)
@@ -3832,7 +3832,7 @@ BEGIN;
 										CASE u_trans.r
 											WHEN 1 THEN COALESCE(CONVERT(NVARCHAR, u_trans.transaction_start_time, 121) + NCHAR(254), N'')
 											ELSE N''
-										END + 
+										END +
 											REPLACE
 											(
 												REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -3955,14 +3955,14 @@ BEGIN;
 			@start_time DATETIME,
 			@database_name sysname;
 
-		IF 
+		IF
 			@recursion = 1
 			AND @output_column_list LIKE '%|[sql_text|]%' ESCAPE '|'
 		BEGIN;
 			DECLARE sql_cursor
 			CURSOR LOCAL FAST_FORWARD
-			FOR 
-				SELECT 
+			FOR
+				SELECT
 					session_id,
 					request_id,
 					sql_handle,
@@ -3977,7 +3977,7 @@ BEGIN;
 			OPEN sql_cursor;
 
 			FETCH NEXT FROM sql_cursor
-			INTO 
+			INTO
 				@session_id,
 				@request_id,
 				@sql_handle,
@@ -4001,7 +4001,7 @@ BEGIN;
 									REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
 									REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
 										N'--' + NCHAR(13) + NCHAR(10) +
-										CASE 
+										CASE
 											WHEN @get_full_inner_text = 1 THEN est.text
 											WHEN LEN(est.text) < (@statement_end_offset / 2) + 1 THEN est.text
 											WHEN SUBSTRING(est.text, (@statement_start_offset/2), 2) LIKE N'[a-zA-Z0-9][a-zA-Z0-9]' THEN est.text
@@ -4033,40 +4033,40 @@ BEGIN;
 								PATH(''),
 								TYPE
 						),
-						s.statement_start_offset = 
-							CASE 
+						s.statement_start_offset =
+							CASE
 								WHEN LEN(est.text) < (@statement_end_offset / 2) + 1 THEN 0
 								WHEN SUBSTRING(CONVERT(VARCHAR(MAX), est.text), (@statement_start_offset/2), 2) LIKE '[a-zA-Z0-9][a-zA-Z0-9]' THEN 0
 								ELSE @statement_start_offset
 							END,
-						s.statement_end_offset = 
-							CASE 
+						s.statement_end_offset =
+							CASE
 								WHEN LEN(est.text) < (@statement_end_offset / 2) + 1 THEN -1
 								WHEN SUBSTRING(CONVERT(VARCHAR(MAX), est.text), (@statement_start_offset/2), 2) LIKE '[a-zA-Z0-9][a-zA-Z0-9]' THEN -1
 								ELSE @statement_end_offset
 							END
-					FROM 
+					FROM
 						#sessions AS s,
 						(
 							SELECT TOP(1)
 								text
 							FROM
 							(
-								SELECT 
-									text, 
+								SELECT
+									text,
 									0 AS row_num
 								FROM sys.dm_exec_sql_text(@sql_handle)
 								
 								UNION ALL
 								
-								SELECT 
+								SELECT
 									NULL,
 									1 AS row_num
 							) AS est0
 							ORDER BY
 								row_num
 						) AS est
-					WHERE 
+					WHERE
 						s.session_id = @session_id
 						AND s.request_id = @request_id
 						AND s.recursion = 1
@@ -4075,13 +4075,13 @@ BEGIN;
 				BEGIN CATCH;
 					UPDATE s
 					SET
-						s.sql_text = 
-							CASE ERROR_NUMBER() 
+						s.sql_text =
+							CASE ERROR_NUMBER()
 								WHEN 1222 THEN '<timeout_exceeded />'
 								ELSE '<error message="' + ERROR_MESSAGE() + '" />'
 							END
 					FROM #sessions AS s
-					WHERE 
+					WHERE
 						s.session_id = @session_id
 						AND s.request_id = @request_id
 						AND s.recursion = 1
@@ -4104,8 +4104,8 @@ BEGIN;
 			DEALLOCATE sql_cursor;
 		END;
 
-		IF 
-			@get_outer_command = 1 
+		IF
+			@get_outer_command = 1
 			AND @recursion = 1
 			AND @output_column_list LIKE '%|[sql_command|]%' ESCAPE '|'
 		BEGIN;
@@ -4120,8 +4120,8 @@ BEGIN;
 
 			DECLARE buffer_cursor
 			CURSOR LOCAL FAST_FORWARD
-			FOR 
-				SELECT 
+			FOR
+				SELECT
 					session_id,
 					MAX(start_time) AS start_time
 				FROM #sessions
@@ -4136,14 +4136,14 @@ BEGIN;
 			OPEN buffer_cursor;
 
 			FETCH NEXT FROM buffer_cursor
-			INTO 
+			INTO
 				@session_id,
 				@start_time;
 
 			WHILE @@FETCH_STATUS = 0
 			BEGIN;
 				BEGIN TRY;
-					--In SQL Server 2008, DBCC INPUTBUFFER will throw 
+					--In SQL Server 2008, DBCC INPUTBUFFER will throw
 					--an exception if the session no longer exists
 					INSERT @buffer_results
 					(
@@ -4161,7 +4161,7 @@ BEGIN;
 						br.start_time = @start_time
 					FROM @buffer_results AS br
 					WHERE
-						br.session_number = 
+						br.session_number =
 						(
 							SELECT MAX(br2.session_number)
 							FROM @buffer_results br2
@@ -4171,16 +4171,16 @@ BEGIN;
 				END CATCH;
 
 				FETCH NEXT FROM buffer_cursor
-				INTO 
+				INTO
 					@session_id,
 					@start_time;
 			END;
 
 			UPDATE s
 			SET
-				sql_command = 
+				sql_command =
 				(
-					SELECT 
+					SELECT
 						REPLACE
 						(
 							REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -4198,10 +4198,10 @@ BEGIN;
 							N''
 						) AS [processing-instruction(query)]
 					FROM @buffer_results AS br
-					WHERE 
+					WHERE
 						br.session_number = s.session_number
 						AND br.start_time = s.start_time
-						AND 
+						AND
 						(
 							(
 								s.start_time = s.last_request_start_time
@@ -4215,7 +4215,7 @@ BEGIN;
 										AND r2.start_time = s.start_time
 								)
 							)
-							OR 
+							OR
 							(
 								s.request_id = 0
 								AND EXISTS
@@ -4241,8 +4241,8 @@ BEGIN;
 			DEALLOCATE buffer_cursor;
 		END;
 
-		IF 
-			@get_plans >= 1 
+		IF
+			@get_plans >= 1
 			AND @recursion = 1
 			AND @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|'
 		BEGIN;
@@ -4251,7 +4251,7 @@ BEGIN;
 
 			DECLARE plan_cursor
 			CURSOR LOCAL FAST_FORWARD
-			FOR 
+			FOR
 				SELECT
 					session_id,
 					request_id,
@@ -4267,7 +4267,7 @@ BEGIN;
 			OPEN plan_cursor;
 
 			FETCH NEXT FROM plan_cursor
-			INTO 
+			INTO
 				@session_id,
 				@request_id,
 				@plan_handle,
@@ -4289,7 +4289,7 @@ BEGIN;
 							@query_plan = x.query_plan
 						FROM sys.dm_exec_query_statistics_xml(@session_id) AS x;
 
-						IF 
+						IF
 							@query_plan IS NOT NULL
 							AND EXISTS
 							(
@@ -4308,7 +4308,7 @@ BEGIN;
 							SET
 								s.query_plan = @query_plan
 							FROM #sessions AS s
-							WHERE 
+							WHERE
 								s.session_id = @session_id
 								AND s.request_id = @request_id
 								AND s.recursion = 1
@@ -4331,13 +4331,13 @@ BEGIN;
 									CONVERT(xml, query_plan)
 								FROM sys.dm_exec_text_query_plan
 								(
-									@plan_handle, 
+									@plan_handle,
 									CASE @get_plans
 										WHEN 1 THEN
 											@statement_start_offset
 										ELSE
 											0
-									END, 
+									END,
 									CASE @get_plans
 										WHEN 1 THEN
 											@statement_end_offset
@@ -4347,7 +4347,7 @@ BEGIN;
 								)
 							)
 						FROM #sessions AS s
-						WHERE 
+						WHERE
 							s.session_id = @session_id
 							AND s.request_id = @request_id
 							AND s.recursion = 1
@@ -4361,21 +4361,21 @@ BEGIN;
 								s.query_plan =
 								(
 									SELECT
-										N'--' + NCHAR(13) + NCHAR(10) + 
-										N'-- Could not render showplan due to XML data type limitations. ' + NCHAR(13) + NCHAR(10) + 
+										N'--' + NCHAR(13) + NCHAR(10) +
+										N'-- Could not render showplan due to XML data type limitations. ' + NCHAR(13) + NCHAR(10) +
 										N'-- To see the graphical plan save the XML below as a .SQLPLAN file and re-open in SSMS.' + NCHAR(13) + NCHAR(10) +
 										N'--' + NCHAR(13) + NCHAR(10) +
-											REPLACE(qp.query_plan, N'<RelOp', NCHAR(13)+NCHAR(10)+N'<RelOp') + 
+											REPLACE(qp.query_plan, N'<RelOp', NCHAR(13)+NCHAR(10)+N'<RelOp') +
 											NCHAR(13) + NCHAR(10) + N'--' COLLATE Latin1_General_Bin2 AS [processing-instruction(query_plan)]
 									FROM sys.dm_exec_text_query_plan
 									(
-										@plan_handle, 
+										@plan_handle,
 										CASE @get_plans
 											WHEN 1 THEN
 												@statement_start_offset
 											ELSE
 												0
-										END, 
+										END,
 										CASE @get_plans
 											WHEN 1 THEN
 												@statement_end_offset
@@ -4388,7 +4388,7 @@ BEGIN;
 										TYPE
 								)
 							FROM #sessions AS s
-							WHERE 
+							WHERE
 								s.session_id = @session_id
 								AND s.request_id = @request_id
 								AND s.recursion = 1
@@ -4398,13 +4398,13 @@ BEGIN;
 						BEGIN;
 							UPDATE s
 							SET
-								s.query_plan = 
-									CASE ERROR_NUMBER() 
+								s.query_plan =
+									CASE ERROR_NUMBER()
 										WHEN 1222 THEN '<timeout_exceeded />'
 										ELSE '<error message="' + ERROR_MESSAGE() + '" />'
 									END
 							FROM #sessions AS s
-							WHERE 
+							WHERE
 								s.session_id = @session_id
 								AND s.request_id = @request_id
 								AND s.recursion = 1
@@ -4429,14 +4429,14 @@ BEGIN;
 			DEALLOCATE plan_cursor;
 		END;
 
-		IF 
-			@get_locks = 1 
+		IF
+			@get_locks = 1
 			AND @recursion = 1
 			AND @output_column_list LIKE '%|[locks|]%' ESCAPE '|'
 		BEGIN;
 			DECLARE locks_cursor
 			CURSOR LOCAL FAST_FORWARD
-			FOR 
+			FOR
 				SELECT DISTINCT
 					database_name
 				FROM #locks
@@ -4455,7 +4455,7 @@ BEGIN;
 			OPEN locks_cursor;
 
 			FETCH NEXT FROM locks_cursor
-			INTO 
+			INTO
 				@database_name;
 
 			WHILE @@FETCH_STATUS = 0
@@ -4503,7 +4503,7 @@ BEGIN;
 									'NCHAR(0), ' +
 									N''''' ' +
 								'), ' +
-							'principal_name = ' + 
+							'principal_name = ' +
 								'REPLACE ' +
 								'( ' +
 									'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
@@ -4554,7 +4554,7 @@ BEGIN;
 				BEGIN CATCH;
 					UPDATE #locks
 					SET
-						query_error = 
+						query_error =
 							REPLACE
 							(
 								REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -4562,7 +4562,7 @@ BEGIN;
 								REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
 									CONVERT
 									(
-										NVARCHAR(MAX), 
+										NVARCHAR(MAX),
 										ERROR_MESSAGE() COLLATE Latin1_General_Bin2
 									),
 									NCHAR(31),N'?'),NCHAR(30),N'?'),NCHAR(29),N'?'),NCHAR(28),N'?'),NCHAR(27),N'?'),NCHAR(26),N'?'),NCHAR(25),N'?'),NCHAR(24),N'?'),NCHAR(23),N'?'),NCHAR(22),N'?'),
@@ -4571,7 +4571,7 @@ BEGIN;
 								NCHAR(0),
 								N''
 							)
-					WHERE 
+					WHERE
 						database_name = @database_name
 					OPTION (KEEPFIXED PLAN);
 				END CATCH;
@@ -4587,10 +4587,10 @@ BEGIN;
 			CREATE CLUSTERED INDEX IX_SRD ON #locks (session_id, request_id, database_name);
 
 			UPDATE s
-			SET 
+			SET
 				s.locks =
 				(
-					SELECT 
+					SELECT
 						REPLACE
 						(
 							REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -4598,7 +4598,7 @@ BEGIN;
 							REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
 								CONVERT
 								(
-									NVARCHAR(MAX), 
+									NVARCHAR(MAX),
 									l1.database_name COLLATE Latin1_General_Bin2
 								),
 								NCHAR(31),N'?'),NCHAR(30),N'?'),NCHAR(29),N'?'),NCHAR(28),N'?'),NCHAR(27),N'?'),NCHAR(26),N'?'),NCHAR(25),N'?'),NCHAR(24),N'?'),NCHAR(23),N'?'),NCHAR(22),N'?'),
@@ -4609,12 +4609,12 @@ BEGIN;
 						) AS [Database/@name],
 						MIN(l1.query_error) AS [Database/@query_error],
 						(
-							SELECT 
+							SELECT
 								l2.request_mode AS [Lock/@request_mode],
 								l2.request_status AS [Lock/@request_status],
 								COUNT(*) AS [Lock/@request_count]
 							FROM #locks AS l2
-							WHERE 
+							WHERE
 								l1.session_id = l2.session_id
 								AND l1.request_id = l2.request_id
 								AND l2.database_name = l1.database_name
@@ -4635,7 +4635,7 @@ BEGIN;
 										l4.resource_type AS [Lock/@resource_type],
 										l4.page_type AS [Lock/@page_type],
 										l4.index_name AS [Lock/@index_name],
-										CASE 
+										CASE
 											WHEN l4.object_name IS NULL THEN l4.schema_name
 											ELSE NULL
 										END AS [Lock/@schema_name],
@@ -4645,7 +4645,7 @@ BEGIN;
 										l4.request_status AS [Lock/@request_status],
 										SUM(l4.request_count) AS [Lock/@request_count]
 									FROM #locks AS l4
-									WHERE 
+									WHERE
 										l4.session_id = l3.session_id
 										AND l4.request_id = l3.request_id
 										AND l3.database_name = l4.database_name
@@ -4656,7 +4656,7 @@ BEGIN;
 										l4.resource_type,
 										l4.page_type,
 										l4.index_name,
-										CASE 
+										CASE
 											WHEN l4.object_name IS NULL THEN l4.schema_name
 											ELSE NULL
 										END,
@@ -4669,12 +4669,12 @@ BEGIN;
 										TYPE
 								) AS [Object/Locks]
 							FROM #locks AS l3
-							WHERE 
+							WHERE
 								l3.session_id = l1.session_id
 								AND l3.request_id = l1.request_id
 								AND l3.database_name = l1.database_name
 								AND l3.resource_type <> 'DATABASE'
-							GROUP BY 
+							GROUP BY
 								l3.session_id,
 								l3.request_id,
 								l3.database_name,
@@ -4690,7 +4690,7 @@ BEGIN;
 						AND l1.request_id = s.request_id
 						AND l1.start_time IN (s.start_time, s.last_request_start_time)
 						AND s.recursion = 1
-					GROUP BY 
+					GROUP BY
 						l1.session_id,
 						l1.request_id,
 						l1.database_name
@@ -4702,7 +4702,7 @@ BEGIN;
 			OPTION (KEEPFIXED PLAN);
 		END;
 
-		IF 
+		IF
 			@find_block_leaders = 1
 			AND @recursion = 1
 			AND @output_column_list LIKE '%|[blocked_session_count|]%' ESCAPE '|'
@@ -4825,13 +4825,13 @@ BEGIN;
 			OPEN blocks_cursor;
 			
 			FETCH NEXT FROM blocks_cursor
-			INTO 
+			INTO
 				@database_name;
 			
 			WHILE @@FETCH_STATUS = 0
 			BEGIN;
 				BEGIN TRY;
-					SET @sql_n = 
+					SET @sql_n =
 						CONVERT(NVARCHAR(MAX), '') +
 						'UPDATE b ' +
 						'SET ' +
@@ -4879,7 +4879,7 @@ BEGIN;
 				BEGIN CATCH;
 					UPDATE #blocked_requests
 					SET
-						query_error = 
+						query_error =
 							REPLACE
 							(
 								REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -4887,7 +4887,7 @@ BEGIN;
 								REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
 									CONVERT
 									(
-										NVARCHAR(MAX), 
+										NVARCHAR(MAX),
 										ERROR_MESSAGE() COLLATE Latin1_General_Bin2
 									),
 									NCHAR(31),N'?'),NCHAR(30),N'?'),NCHAR(29),N'?'),NCHAR(28),N'?'),NCHAR(27),N'?'),NCHAR(26),N'?'),NCHAR(25),N'?'),NCHAR(24),N'?'),NCHAR(23),N'?'),NCHAR(22),N'?'),
@@ -4971,7 +4971,7 @@ BEGIN;
 					SET @step_name = NULL;
 
 					SELECT
-						@job_name = 
+						@job_name =
 							REPLACE
 							(
 								REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -4984,7 +4984,7 @@ BEGIN;
 								NCHAR(0),
 								N''?''
 							),
-						@step_name = 
+						@step_name =
 							REPLACE
 							(
 								REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -5014,7 +5014,7 @@ BEGIN;
 								into (/additional_info/agent_job_info/job_name)[1]
 							'')
 						FROM #sessions AS s
-						WHERE 
+						WHERE
 							s.session_id = @session_id
 							AND s.recursion = 1
 						OPTION (KEEPFIXED PLAN);
@@ -5027,7 +5027,7 @@ BEGIN;
 								into (/additional_info/agent_job_info/step_name)[1]
 							'')
 						FROM #sessions AS s
-						WHERE 
+						WHERE
 							s.session_id = @session_id
 							AND s.recursion = 1
 						OPTION (KEEPFIXED PLAN);
@@ -5046,7 +5046,7 @@ BEGIN;
 							into (/additional_info/agent_job_info)[1]
 						'')
 					FROM #sessions AS s
-					WHERE 
+					WHERE
 						s.session_id = @session_id
 						AND s.recursion = 1
 					OPTION (KEEPFIXED PLAN);
@@ -5057,7 +5057,7 @@ BEGIN;
 
 			DECLARE agent_cursor
 			CURSOR LOCAL FAST_FORWARD
-			FOR 
+			FOR
 				SELECT
 					s.session_id,
 					agent_nodes.agent_node.value('(job_id/text())[1]', 'uniqueidentifier') AS job_id,
@@ -5071,7 +5071,7 @@ BEGIN;
 			OPEN agent_cursor;
 
 			FETCH NEXT FROM agent_cursor
-			INTO 
+			INTO
 				@session_id,
 				@job_id,
 				@step_id;
@@ -5084,7 +5084,7 @@ BEGIN;
 					@job_id, @step_id, @session_id
 
 				FETCH NEXT FROM agent_cursor
-				INTO 
+				INTO
 					@session_id,
 					@job_id,
 					@step_id;
@@ -5092,10 +5092,10 @@ BEGIN;
 
 			CLOSE agent_cursor;
 			DEALLOCATE agent_cursor;
-		END; 
+		END;
 		
-		IF 
-			@delta_interval > 0 
+		IF
+			@delta_interval > 0
 			AND @recursion <> 1
 		BEGIN;
 			SET @recursion = 1;
@@ -5108,15 +5108,15 @@ BEGIN;
 		END;
 	END;
 
-	SET @sql = 
+	SET @sql =
 		--Outer column list
 		CONVERT
 		(
 			VARCHAR(MAX),
 			CASE
-				WHEN 
-					@destination_table <> '' 
-					AND @return_schema = 0 
+				WHEN
+					@destination_table <> ''
+					AND @return_schema = 0
 						THEN 'INSERT ' + @destination_table + ' '
 				ELSE ''
 			END +
@@ -5127,7 +5127,7 @@ BEGIN;
 				ELSE ''
 			END
 		--End outer column list
-		) + 
+		) +
 		--Inner column list
 		CONVERT
 		(
@@ -5163,15 +5163,15 @@ BEGIN;
 											'CONVERT(VARCHAR, DATEADD(second, elapsed_time / 1000, 0), 120), ' +
 											'9 ' +
 										') + ' +
-										'''.'' + ' + 
+										'''.'' + ' +
 										'RIGHT(''000'' + CONVERT(VARCHAR, elapsed_time % 1000), 3) ' +
 							'END AS [dd hh:mm:ss.mss], '
 						ELSE
 							''
 					END +
 					--[dd hh:mm:ss.mss (avg)] / avg_elapsed_time
-					CASE 
-						WHEN  @format_output IN (1, 2) THEN 
+					CASE
+						WHEN  @format_output IN (1, 2) THEN
 							'RIGHT ' +
 							'( ' +
 								'''00'' + CONVERT(VARCHAR, avg_elapsed_time / 86400000), ' +
@@ -5264,12 +5264,12 @@ BEGIN;
 							--physical_io_delta			
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND physical_io_delta >= 0 ' +
 										'THEN ' +
 										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, physical_io_delta))) OVER() - LEN(CONVERT(VARCHAR, physical_io_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_io_delta), 1), 19)) ' 
+											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, physical_io_delta))) OVER() - LEN(CONVERT(VARCHAR, physical_io_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_io_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_io_delta), 1), 19)) '
 											ELSE 'physical_io_delta '
 										END +
@@ -5278,7 +5278,7 @@ BEGIN;
 							--reads_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND reads_delta >= 0 ' +
 										'THEN ' +
@@ -5292,7 +5292,7 @@ BEGIN;
 							--physical_reads_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND physical_reads_delta >= 0 ' +
 										'THEN ' +
@@ -5300,13 +5300,13 @@ BEGIN;
 											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, physical_reads_delta))) OVER() - LEN(CONVERT(VARCHAR, physical_reads_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_reads_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_reads_delta), 1), 19)) '
 											ELSE 'physical_reads_delta '
-										END + 
+										END +
 								'ELSE NULL ' +
 							'END AS physical_reads_delta, ' +
 							--writes_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND writes_delta >= 0 ' +
 										'THEN ' +
@@ -5314,13 +5314,13 @@ BEGIN;
 											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, writes_delta))) OVER() - LEN(CONVERT(VARCHAR, writes_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, writes_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, writes_delta), 1), 19)) '
 											ELSE 'writes_delta '
-										END + 
+										END +
 								'ELSE NULL ' +
 							'END AS writes_delta, ' +
 							--tempdb_allocations_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND tempdb_allocations_delta >= 0 ' +
 										'THEN ' +
@@ -5328,27 +5328,27 @@ BEGIN;
 											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, tempdb_allocations_delta))) OVER() - LEN(CONVERT(VARCHAR, tempdb_allocations_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_allocations_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_allocations_delta), 1), 19)) '
 											ELSE 'tempdb_allocations_delta '
-										END + 
+										END +
 								'ELSE NULL ' +
 							'END AS tempdb_allocations_delta, ' +
 							--tempdb_current_delta
-							--this is the only one that can (legitimately) go negative 
+							--this is the only one that can (legitimately) go negative
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 										'THEN ' +
 										CASE @format_output
 											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, tempdb_current_delta))) OVER() - LEN(CONVERT(VARCHAR, tempdb_current_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_current_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_current_delta), 1), 19)) '
 											ELSE 'tempdb_current_delta '
-										END + 
+										END +
 								'ELSE NULL ' +
 							'END AS tempdb_current_delta, ' +
 							--CPU_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 										'THEN ' +
 											'CASE ' +
@@ -5360,13 +5360,13 @@ BEGIN;
 																WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, thread_CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, thread_CPU_delta), 1), 19)) '
 																WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, thread_CPU_delta), 1), 19)) '
 																ELSE 'thread_CPU_delta '
-															END + 
+															END +
 												'WHEN CPU_delta >= 0 THEN ' +
 													CASE @format_output
 														WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU_delta), 1), 19)) '
 														WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU_delta), 1), 19)) '
 														ELSE 'CPU_delta '
-													END + 
+													END +
 												'ELSE NULL ' +
 											'END ' +
 								'ELSE ' +
@@ -5375,7 +5375,7 @@ BEGIN;
 							--context_switches_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND context_switches_delta >= 0 ' +
 										'THEN ' +
@@ -5383,13 +5383,13 @@ BEGIN;
 											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, context_switches_delta))) OVER() - LEN(CONVERT(VARCHAR, context_switches_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, context_switches_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, context_switches_delta), 1), 19)) '
 											ELSE 'context_switches_delta '
-										END + 
+										END +
 								'ELSE NULL ' +
 							'END AS context_switches_delta, ' +
 							--used_memory_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND used_memory_delta >= 0 ' +
 										'THEN ' +
@@ -5397,14 +5397,14 @@ BEGIN;
 											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, used_memory_delta))) OVER() - LEN(CONVERT(VARCHAR, used_memory_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory_delta), 1), 19)) '
 											ELSE 'used_memory_delta '
-										END + 
+										END +
 								'ELSE NULL ' +
-							'END AS used_memory_delta, 
+							'END AS used_memory_delta,
 							' +
 							--max_used_memory_delta
 							'CASE ' +
 								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' + 
+									'first_request_start_time = last_request_start_time ' +
 									'AND num_events = 2 ' +
 									'AND max_used_memory_delta >= 0 ' +
 										'THEN ' +
@@ -5412,7 +5412,7 @@ BEGIN;
 											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, max_used_memory_delta))) OVER() - LEN(CONVERT(VARCHAR, max_used_memory_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory_delta), 1), 19)) '
 											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory_delta), 1), 19)) '
 											ELSE 'max_used_memory_delta '
-										END + 
+										END +
 								'ELSE NULL ' +
 							'END AS max_used_memory_delta, '
 						ELSE ''
@@ -5435,12 +5435,12 @@ BEGIN;
 						ELSE ''
 					END + 'open_tran_count, ' +
 					--sql_command
-					CASE @format_output 
+					CASE @format_output
 						WHEN 0 THEN 'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
 						ELSE ''
 					END + 'sql_command, ' +
 					--sql_text
-					CASE @format_output 
+					CASE @format_output
 						WHEN 0 THEN 'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
 						ELSE ''
 					END + 'sql_text, ' +
@@ -5546,7 +5546,7 @@ BEGIN;
 						END +
 						'COUNT(*) OVER (PARTITION BY session_id, request_id) AS num_events ' +
 					'FROM #sessions AS s1 ' +
-					CASE 
+					CASE
 						WHEN @sort_order = '' THEN ''
 						ELSE
 							'ORDER BY ' +
@@ -5568,7 +5568,7 @@ BEGIN;
 									'SELECT ' +
 										''','' + ' +
 										'QUOTENAME(COLUMN_NAME) + '' '' + ' +
-										'DATA_TYPE + ' + 
+										'DATA_TYPE + ' +
 										'CASE ' +
 											'WHEN DATA_TYPE LIKE ''%char'' THEN ''('' + COALESCE(NULLIF(CONVERT(VARCHAR, CHARACTER_MAXIMUM_LENGTH), ''-1''), ''max'') + '') '' ' +
 											'ELSE '' '' ' +
@@ -5589,7 +5589,7 @@ BEGIN;
 								'1, ' +
 								''''' ' +
 							') + ' +
-						''')''; ' 
+						''')''; '
 				ELSE ''
 			END
 		--End derived table and INSERT specification
