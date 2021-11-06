@@ -1839,7 +1839,6 @@ BEGIN;
 				program_name NVARCHAR(128),
 				database_id SMALLINT,
 				memory_usage INT,
-				max_memory_usage INT,
 				open_tran_count SMALLINT, 
 				' +
 				CASE
@@ -1883,7 +1882,6 @@ BEGIN;
 				program_name,
 				database_id,
 				memory_usage,
-				max_memory_usage,
 				open_tran_count, 
 				' +
 				CASE
@@ -1916,17 +1914,7 @@ BEGIN;
 				spy.login_name,
 				spy.program_name,
 				spy.database_id,
-				' + 
-				CASE
-					WHEN @get_memory_grant_info = 1 THEN
-						'COALESCE(mg.used_memory_kb / 8, spy.memory_usage) AS memory_usage,
-						mg.max_used_memory_kb,
-						'
-					ELSE
-						'spy.memory_usage,				
-						CONVERT(INT, NULL) AS max_memory_usage,
-						'
-				END + '
+				spy.memory_usage,
 				spy.open_tran_count,
 				' +
 				CASE
@@ -2287,22 +2275,6 @@ BEGIN;
 						')
 				) AS spx
 			) AS spy
-			' +
-			CASE 
-				WHEN @get_memory_grant_info = 1 THEN
-					'OUTER APPLY
-					(
-						SELECT TOP(@i)
-							mg0.*
-						FROM sys.dm_exec_query_memory_grants AS mg0
-						WHERE
-							mg0.session_id = spy.session_id
-							AND mg0.request_id = spy.request_id
-					) AS mg
-					'
-				ELSE
-					''
-			END + '
 			WHERE
 				spy.r = 1; 
 			' + 
@@ -2358,353 +2330,357 @@ BEGIN;
 				) AS session_number,
 				' +
 				CASE
-					WHEN @output_column_list LIKE '%|[dd hh:mm:ss.mss|]%' ESCAPE '|' THEN 
+					WHEN @output_column_list LIKE '%|[dd hh:mm:ss.mss|]%' ESCAPE '|' THEN
 						'x.elapsed_time '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS elapsed_time, 
+				END +
+					'AS elapsed_time,
 					' +
 				CASE
 					WHEN
 						(
-							@output_column_list LIKE '%|[dd hh:mm:ss.mss (avg)|]%' ESCAPE '|' OR 
+							@output_column_list LIKE '%|[dd hh:mm:ss.mss (avg)|]%' ESCAPE '|' OR
 							@output_column_list LIKE '%|[avg_elapsed_time|]%' ESCAPE '|'
 						)
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.avg_elapsed_time / 1000 '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS avg_elapsed_time, 
+				END +
+					'AS avg_elapsed_time,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[physical_io|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[physical_io_delta|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.physical_io '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS physical_io, 
+				END +
+					'AS physical_io,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[reads|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[reads_delta|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.reads '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS reads, 
+				END +
+					'AS reads,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[physical_reads|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[physical_reads_delta|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.physical_reads '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS physical_reads, 
+				END +
+					'AS physical_reads,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[writes|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[writes_delta|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.writes '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS writes, 
+				END +
+					'AS writes,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[tempdb_allocations|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[tempdb_allocations_delta|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.tempdb_allocations '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS tempdb_allocations, 
+				END +
+					'AS tempdb_allocations,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[tempdb_current|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[tempdb_current_delta|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.tempdb_current '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS tempdb_current, 
+				END +
+					'AS tempdb_current,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[CPU|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
 							THEN
 								'x.CPU '
 					ELSE
 						'0 '
-				END + 
-					'AS CPU, 
+				END +
+					'AS CPU,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
 						AND @get_task_info = 2
 						AND @sys_info = 1
-							THEN 
+							THEN
 								'x.thread_CPU_snapshot '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS thread_CPU_snapshot, 
+				END +
+					'AS thread_CPU_snapshot,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[context_switches|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[context_switches_delta|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.context_switches '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS context_switches, 
+				END +
+					'AS context_switches,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[used_memory|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[used_memory_delta|]%' ESCAPE '|'
-							THEN 
-								'x.used_memory '
-					ELSE 
+							THEN
+								CASE
+									WHEN @get_memory_grant_info = 1 THEN
+										'COALESCE(x.mg_used_memory_kb / 8, x.used_memory) '
+									ELSE
+										'x.used_memory '
+								END
+					ELSE
 						'0 '
 				END + 
-					'AS used_memory, 
+					'AS used_memory,
 					' +
 				CASE
 					WHEN 
 						@output_column_list LIKE '%|[max_used_memory|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[max_used_memory_delta|]%' ESCAPE '|'
-							THEN 
-								'x.max_used_memory '
-					ELSE 
+							THEN
+								'x.max_used_memory_kb '
+					ELSE
 						'0 '
-				END + 
-					'AS max_used_memory, 
+				END +
+					'AS max_used_memory,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[requested_memory|]%' ESCAPE '|'
-							THEN 
+							THEN
 								'x.requested_memory_kb '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS requested_memory, 
+				END +
+					'AS requested_memory,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[granted_memory|]%' ESCAPE '|'
-
-							THEN 
+							THEN
 								'x.mg_granted_memory_kb '
-					ELSE 
+					ELSE
 						'0 '
-				END + 
-					'AS granted_memory, 
+				END +
+					'AS granted_memory,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[tasks|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.tasks '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS tasks, 
+				END +
+					'AS tasks,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						(
-							@output_column_list LIKE '%|[status|]%' ESCAPE '|' 
+							@output_column_list LIKE '%|[status|]%' ESCAPE '|'
 							OR @output_column_list LIKE '%|[sql_command|]%' ESCAPE '|'
 						)
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.status '
-					ELSE 
+					ELSE
 						''''' '
-				END + 
-					'AS status, 
+				END +
+					'AS status,
 					' +
 				CASE
-					WHEN 
-						@output_column_list LIKE '%|[wait_info|]%' ESCAPE '|' 
+					WHEN
+						@output_column_list LIKE '%|[wait_info|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								CASE @get_task_info
 									WHEN 2 THEN
 										'COALESCE(x.task_wait_info, x.sys_wait_info) '
 									ELSE
 										'x.sys_wait_info '
 								END
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS wait_info, 
+				END +
+					'AS wait_info,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						(
-							@output_column_list LIKE '%|[tran_start_time|]%' ESCAPE '|' 
-							OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|' 
+							@output_column_list LIKE '%|[tran_start_time|]%' ESCAPE '|'
+							OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|'
 						)
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.transaction_id '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS transaction_id, 
+				END +
+					'AS transaction_id,
 					' +
 				CASE
-					WHEN 
-						@output_column_list LIKE '%|[open_tran_count|]%' ESCAPE '|' 
+					WHEN
+						@output_column_list LIKE '%|[open_tran_count|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.open_tran_count '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS open_tran_count, 
+				END +
+					'AS open_tran_count,
 					' +
 				CASE
 					WHEN 
-						@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
+						@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.sql_handle '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS sql_handle, 
+				END +
+					'AS sql_handle,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						(
-							@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
-							OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
+							@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|'
+							OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|'
 						)
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.statement_start_offset '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS statement_start_offset, 
+				END +
+					'AS statement_start_offset,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						(
-							@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|' 
-							OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
+							@output_column_list LIKE '%|[sql_text|]%' ESCAPE '|'
+							OR @output_column_list LIKE '%|[query_plan|]%' ESCAPE '|'
 						)
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.statement_end_offset '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS statement_end_offset, 
+				END +
+					'AS statement_end_offset,
 					' +
-				'NULL AS sql_text, 
+				'NULL AS sql_text,
 					' +
 				CASE
-					WHEN 
-						@output_column_list LIKE '%|[query_plan|]%' ESCAPE '|' 
+					WHEN
+						@output_column_list LIKE '%|[query_plan|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.plan_handle '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS plan_handle, 
+				END +
+					'AS plan_handle,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[blocking_session_id|]%' ESCAPE '|' OR @find_block_leaders = 1
 						AND @recursion = 1
-							THEN 
+							THEN
 								'NULLIF(x.blocking_session_id, 0) '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS blocking_session_id, 
+				END +
+					'AS blocking_session_id,
 					' +
 				CASE
-					WHEN 
+					WHEN
 						@output_column_list LIKE '%|[percent_complete|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.percent_complete '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS percent_complete, 
+				END +
+					'AS percent_complete,
 					' +
 				CASE
-					WHEN 
-						@output_column_list LIKE '%|[host_name|]%' ESCAPE '|' 
+					WHEN
+						@output_column_list LIKE '%|[host_name|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.host_name '
-					ELSE 
+					ELSE
 						''''' '
-				END + 
-					'AS host_name, 
+				END +
+					'AS host_name,
 					' +
 				CASE
-					WHEN 
-						@output_column_list LIKE '%|[login_name|]%' ESCAPE '|' 
+					WHEN
+						@output_column_list LIKE '%|[login_name|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.login_name '
-					ELSE 
+					ELSE
 						''''' '
-				END + 
-					'AS login_name, 
+				END +
+					'AS login_name,
 					' +
 				CASE
-					WHEN 
-						@output_column_list LIKE '%|[database_name|]%' ESCAPE '|' 
+					WHEN
+						@output_column_list LIKE '%|[database_name|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'DB_NAME(x.database_id) '
-					ELSE 
+					ELSE
 						'NULL '
-				END + 
-					'AS database_name, 
+				END +
+					'AS database_name,
 					' +
 				CASE
-					WHEN 
-						@output_column_list LIKE '%|[program_name|]%' ESCAPE '|' 
+					WHEN
+						@output_column_list LIKE '%|[program_name|]%' ESCAPE '|'
 						AND @recursion = 1
-							THEN 
+							THEN
 								'x.program_name '
-					ELSE 
+					ELSE
 						''''' '
-				END + 
-					'AS program_name, 
+				END +
+					'AS program_name,
 					' +
 				CASE
 					WHEN
@@ -2839,9 +2815,9 @@ BEGIN;
 									x.grant_time,
 									x.wait_time_ms,
 									x.requested_memory_kb,	
-									x.mg_granted_memory_kb,
-									x.used_memory AS used_memory_kb,
-									x.max_used_memory AS max_used_memory_kb,
+									x.mg_granted_memory_kb AS granted_memory_kb,
+									x.mg_used_memory_kb AS used_memory_kb,
+									x.max_used_memory_kb,
 									x.ideal_memory_kb,	
 									x.required_memory_kb,
 									x.queue_id,
@@ -2860,8 +2836,8 @@ BEGIN;
 									x.max_target_memory_kb,
 									x.total_memory_kb,
 									x.available_memory_kb,
-									x.rs_granted_memory_kb,
-									x.used_memory_kb,
+									x.rs_granted_memory_kb AS granted_memory_kb,
+									x.rs_used_memory_kb AS used_memory_kb,
 									x.grantee_count,
 									x.waiter_count
 								FOR XML 
@@ -3034,7 +3010,8 @@ BEGIN;
 						CASE 
 							WHEN @get_memory_grant_info = 1 THEN 
 								'sp.memory_usage AS used_memory,
-								sp.max_memory_usage AS max_used_memory,
+								mg.used_memory_kb AS mg_used_memory_kb,
+								mg.max_used_memory_kb,
 								mg.request_time,
 								mg.grant_time,
 								mg.wait_time_ms,
@@ -3052,7 +3029,7 @@ BEGIN;
 								rs.total_memory_kb,
 								rs.available_memory_kb,
 								rs.granted_memory_kb AS rs_granted_memory_kb,
-								rs.used_memory_kb,
+								rs.used_memory_kb AS rs_used_memory_kb,
 								rs.grantee_count,
 								rs.waiter_count,
 								rs.timeout_error_count,
