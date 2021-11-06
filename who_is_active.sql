@@ -211,18 +211,20 @@ Non-Formatted:	[used_memory] [bigint] NOT NULL
 Formatted:		[max_used_memory] [varchar](30) NULL
 Non-Formatted:	[max_used_memory] [bigint] NULL
 	(Requires @get_memory_grant_info = 1)
-	For an active request, the maximum amount of memory, in KB, that has been used during
-	processing up to this point of observation for the current query
+	For an active request, the maximum amount of memory that has been used during
+	processing up to the point of observation for the current query
 
 Formatted:		[requested_memory] [varchar](30) NULL
 Non-Formatted:	[requested_memory] [bigint] NULL
 	(Requires @get_memory_grant_info = 1)
-	For an active request, requested_memory kb for the current query
+	For an active request, the amount of memory requested by the query processor
+	for hash, sort, and parallelism operations
 
 Formatted:		[granted_memory] [varchar](30) NULL
 Non-Formatted:	[granted_memory] [bigint] NULL
 	(Requires @get_memory_grant_info = 1)
-	For an active request, granted_memory kb for the current query
+	For an active request, the amount of memory granted to the query processor
+	for hash, sort, and parallelism operations
 
 Formatted:		[physical_io_delta] [varchar](30) NULL
 Non-Formatted:	[physical_io_delta] [bigint] NULL
@@ -279,7 +281,7 @@ Non-Formatted:	[used_memory_delta] [bigint] NULL
 
 Formatted:		[max_used_memory_delta] [varchar](30) NULL
 Non-Formatted:	[max_used_memory_delta] [bigint] NULL
-	Difference between the max memory usage kb reported on the first and second collections
+	Difference between the max memory usage reported on the first and second collections
 	If the request started after the first collection, the value will be NULL
 
 Formatted:		[tasks] [varchar](30) NULL
@@ -2472,7 +2474,7 @@ BEGIN;
 						@output_column_list LIKE '%|[max_used_memory|]%' ESCAPE '|'
 						OR @output_column_list LIKE '%|[max_used_memory_delta|]%' ESCAPE '|'
 							THEN
-								'x.max_used_memory_kb '
+								'x.max_used_memory_kb / 8 '
 					ELSE
 						'0 '
 				END +
@@ -2482,7 +2484,7 @@ BEGIN;
 					WHEN
 						@output_column_list LIKE '%|[requested_memory|]%' ESCAPE '|'
 							THEN
-								'x.requested_memory_kb '
+								'x.requested_memory_kb / 8 '
 					ELSE
 						'0 '
 				END +
@@ -2492,7 +2494,7 @@ BEGIN;
 					WHEN
 						@output_column_list LIKE '%|[granted_memory|]%' ESCAPE '|'
 							THEN
-								'x.mg_granted_memory_kb '
+								'x.mg_granted_memory_kb / 8 '
 					ELSE
 						'0 '
 				END +
