@@ -508,7 +508,7 @@ BEGIN;
 	
 	IF @sql_version < 1001600 and @get_memory_grant_info = 1
 	BEGIN;
-		RAISERROR('Sorry, advanced memory options are not available on SQL Server versions less than 2008', 16, 1);
+		RAISERROR('Advanced memory options are not available on SQL Server versions less than 2008', 16, 1);
 		RETURN;
 	END;
 
@@ -3170,19 +3170,19 @@ BEGIN;
 					CASE
 						WHEN (@get_memory_grant_info = 1 AND @sql_version >= 1001600) THEN
 							'LEFT OUTER JOIN sys.dm_exec_query_stats AS qs ON
-									r.sql_handle = qs.sql_handle
-								AND	r.plan_handle = qs.plan_handle
-								AND	r.statement_start_offset = qs.statement_start_offset
+								r.sql_handle = qs.sql_handle
+								AND r.plan_handle = qs.plan_handle
+								AND r.statement_start_offset = qs.statement_start_offset
 							LEFT OUTER JOIN sys.dm_exec_query_memory_grants mg ON
-									mg.session_id = sp.session_id 
-								AND	mg.request_id = sp.request_id
+								mg.session_id = sp.session_id 
+								AND mg.request_id = sp.request_id
 							LEFT OUTER JOIN sys.dm_exec_query_resource_semaphores rs ON
-									mg.resource_semaphore_id = rs.resource_semaphore_id 
-								AND	mg.pool_id = rs.pool_id
+								mg.resource_semaphore_id = rs.resource_semaphore_id 
+								AND mg.pool_id = rs.pool_id
 							LEFT OUTER JOIN sys.resource_governor_workload_groups wg ON
-									s.group_id = wg.group_id
+								s.group_id = wg.group_id
 							LEFT OUTER JOIN sys.resource_governor_resource_pools rp ON
-									wg.pool_id = rp.pool_id'
+								wg.pool_id = rp.pool_id'
 						ELSE
 							''
 					END + '
