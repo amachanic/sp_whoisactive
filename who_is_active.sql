@@ -1957,12 +1957,7 @@ BEGIN;
 						(
 							SELECT TOP(@i)
 								sp2.spid AS session_id,
-								CASE sp2.status
-									WHEN ''sleeping'' THEN
-										CONVERT(INT, 0)
-									ELSE
-										sp2.request_id
-								END AS request_id,
+								v2.request_id,
 								MAX(sp2.login_time) AS login_time,
 								MAX(sp2.last_batch) AS last_request_end_time,
 								MAX(CONVERT(VARCHAR(30), RTRIM(sp2.status)) COLLATE Latin1_General_Bin2) AS status,
@@ -1991,7 +1986,7 @@ BEGIN;
 								MAX(sp2.memusage) AS memory_usage,
 								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
-								CASE WHEN CHARINDEX('' (LATCH '', sp2.waitresource) > 0 THEN LEFT(sp2.waitresource, CHARINDEX('' (LATCH '', sp2.waitresource) - 1) ELSE RTRIM(sp2.waitresource) END AS wait_resource,
+								v2.wait_resource,
 								MAX(sp2.waittime) AS wait_time,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0) AS blocked,
 								MAX
@@ -2050,6 +2045,24 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
+							CROSS APPLY
+							(
+								SELECT
+									CASE sp2.status
+										WHEN ''sleeping'' THEN
+											CONVERT(INT, 0)
+										ELSE
+											sp2.request_id
+									END AS request_id,
+									RTRIM
+									(
+										LEFT
+										(
+											sp2.waitresource,
+											ISNULL(NULLIF(CHARINDEX('' (LATCH '', sp2.waitresource) - 1, -1), 256)
+										)
+									) AS wait_resource
+							) AS v2
 							' +
 							CASE 
 								WHEN 
@@ -2065,14 +2078,9 @@ BEGIN;
 							END +
 							'GROUP BY
 								sp2.spid,
-								CASE sp2.status
-									WHEN ''sleeping'' THEN
-										CONVERT(INT, 0)
-									ELSE
-										sp2.request_id
-								END,
+								v2.request_id,
 								RTRIM(sp2.lastwaittype),
-								CASE WHEN CHARINDEX('' (LATCH '', sp2.waitresource) > 0 THEN LEFT(sp2.waitresource, CHARINDEX('' (LATCH '', sp2.waitresource) - 1) ELSE RTRIM(sp2.waitresource) END,
+								v2.wait_resource,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0)
 						) AS sp1
 					) AS sp0
