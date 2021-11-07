@@ -58,7 +58,8 @@ ALTER PROC dbo.sp_WhoIsActive
 	--Get the associated outer ad hoc query or stored procedure call, if available
 	@get_outer_command BIT = 0,
 
-	--Enables pulling transaction log write info and transaction duration
+	--Enables pulling transaction log write info, transaction duration, and the
+	--implicit_transaction identification column
 	@get_transaction_info BIT = 0,
 
 	--Get information on active tasks, based on three interest levels
@@ -323,6 +324,11 @@ Formatted/Non:	[tran_log_writes] [nvarchar](4000) NULL
 	A is a database that has been touched by an active transaction
 	B is the number of log writes that have been made in the database as a result of the transaction
 	C is the number of log kilobytes consumed by the log records
+
+Formatted/Non:	[implicit_tran] [nvarchar](3) NULL
+	(Requires @get_transaction_info option)
+	Returns "ON" if a transaction has been started as a result of the session using the
+	implicit_transactions option, or "OFF" otherwise.
 
 Formatted:		[open_tran_count] [varchar](30) NULL
 Non-Formatted:	[open_tran_count] [smallint] NULL
@@ -957,130 +963,134 @@ BEGIN;
 			UNION ALL
 			SELECT '[used_memory]', 13
 			UNION ALL
-			SELECT '[physical_io_delta]', 14
-			WHERE
-				@delta_interval > 0	
-				AND @get_task_info = 2
-			UNION ALL
-			SELECT '[reads_delta]', 15
-			WHERE
-				@delta_interval > 0
-			UNION ALL
-			SELECT '[physical_reads_delta]', 16
-			WHERE
-				@delta_interval > 0
-			UNION ALL
-			SELECT '[writes_delta]', 17
-			WHERE
-				@delta_interval > 0
-			UNION ALL
-			SELECT '[tempdb_allocations_delta]', 18
-			WHERE
-				@delta_interval > 0
-			UNION ALL
-			SELECT '[tempdb_current_delta]', 19
-			WHERE
-				@delta_interval > 0
-			UNION ALL
-			SELECT '[CPU_delta]', 20
-			WHERE
-				@delta_interval > 0
-			UNION ALL
-			SELECT '[context_switches_delta]', 21
-			WHERE
-				@delta_interval > 0
-				AND @get_task_info = 2
-			UNION ALL
-			SELECT '[used_memory_delta]', 22
-			WHERE
-				@delta_interval > 0
-			UNION ALL
-			SELECT '[tasks]', 23
-			WHERE
-				@get_task_info = 2
-			UNION ALL
-			SELECT '[status]', 24
-			UNION ALL
-			SELECT '[wait_info]', 25
-			WHERE
-				@get_task_info > 0
-				OR @find_block_leaders = 1
-			UNION ALL
-			SELECT '[locks]', 26
-			WHERE
-				@get_locks = 1
-			UNION ALL
-			SELECT '[tran_start_time]', 27
-			WHERE
-				@get_transaction_info = 1
-			UNION ALL
-			SELECT '[tran_log_writes]', 28
-			WHERE
-				@get_transaction_info = 1
-			UNION ALL
-			SELECT '[open_tran_count]', 29
-			UNION ALL
-			SELECT '[sql_command]', 30
-			WHERE
-				@get_outer_command = 1
-			UNION ALL
-			SELECT '[sql_text]', 31
-			UNION ALL
-			SELECT '[query_plan]', 32
-			WHERE
-				@get_plans >= 1
-			UNION ALL
-			SELECT '[blocking_session_id]', 33
-			WHERE
-				@get_task_info > 0
-				OR @find_block_leaders = 1
-			UNION ALL
-			SELECT '[blocked_session_count]', 34
-			WHERE
-				@find_block_leaders = 1
-			UNION ALL
-			SELECT '[percent_complete]', 35
-			UNION ALL
-			SELECT '[host_name]', 36
-			UNION ALL
-			SELECT '[login_name]', 37
-			UNION ALL
-			SELECT '[database_name]', 38
-			UNION ALL
-			SELECT '[program_name]', 39
-			UNION ALL
-			SELECT '[additional_info]', 40
-			WHERE
-				@get_additional_info = 1
-			UNION ALL
-			SELECT '[start_time]', 41
-			UNION ALL
-			SELECT '[login_time]', 42
-			UNION ALL
-			SELECT '[request_id]', 43
-			UNION ALL
-			SELECT '[collection_time]', 44
-			UNION ALL
-			SELECT '[memory_info]', 23
-			WHERE
-				@get_memory_info = 1
-			UNION ALL
 			SELECT '[max_used_memory]', 14
 			WHERE
 				@get_memory_info = 1
 			UNION ALL
-			SELECT '[requested_memory]', 14
+			SELECT '[requested_memory]', 15
 			WHERE
 				@get_memory_info = 1
 			UNION ALL
-			SELECT '[granted_memory]', 14
+			SELECT '[granted_memory]', 16
 			WHERE
 				@get_memory_info = 1
 			UNION ALL
-			SELECT '[max_used_memory_delta]', 23
+			SELECT '[physical_io_delta]', 17
+			WHERE
+				@delta_interval > 0	
+				AND @get_task_info = 2
+			UNION ALL
+			SELECT '[reads_delta]', 18
+			WHERE
+				@delta_interval > 0
+			UNION ALL
+			SELECT '[physical_reads_delta]', 19
+			WHERE
+				@delta_interval > 0
+			UNION ALL
+			SELECT '[writes_delta]', 20
+			WHERE
+				@delta_interval > 0
+			UNION ALL
+			SELECT '[tempdb_allocations_delta]', 21
+			WHERE
+				@delta_interval > 0
+			UNION ALL
+			SELECT '[tempdb_current_delta]', 22
+			WHERE
+				@delta_interval > 0
+			UNION ALL
+			SELECT '[CPU_delta]', 23
+			WHERE
+				@delta_interval > 0
+			UNION ALL
+			SELECT '[context_switches_delta]', 24
+			WHERE
+				@delta_interval > 0
+				AND @get_task_info = 2
+			UNION ALL
+			SELECT '[used_memory_delta]', 25
+			WHERE
+				@delta_interval > 0
+			UNION ALL
+			SELECT '[max_used_memory_delta]', 26
 			WHERE
 				@delta_interval > 0
 				AND @get_memory_info = 1
+			UNION ALL
+			SELECT '[tasks]', 27
+			WHERE
+				@get_task_info = 2
+			UNION ALL
+			SELECT '[status]', 28
+			UNION ALL
+			SELECT '[wait_info]', 29
+			WHERE
+				@get_task_info > 0
+				OR @find_block_leaders = 1
+			UNION ALL
+			SELECT '[locks]', 30
+			WHERE
+				@get_locks = 1
+			UNION ALL
+			SELECT '[tran_start_time]', 31
+			WHERE
+				@get_transaction_info = 1
+			UNION ALL
+			SELECT '[tran_log_writes]', 32
+			WHERE
+				@get_transaction_info = 1
+			UNION ALL
+			SELECT '[implicit_tran]', 33
+			WHERE
+				@get_transaction_info = 1
+			UNION ALL
+			SELECT '[open_tran_count]', 34
+			UNION ALL
+			SELECT '[sql_command]', 35
+			WHERE
+				@get_outer_command = 1
+			UNION ALL
+			SELECT '[sql_text]', 36
+			UNION ALL
+			SELECT '[query_plan]', 37
+			WHERE
+				@get_plans >= 1
+			UNION ALL
+			SELECT '[blocking_session_id]', 38
+			WHERE
+				@get_task_info > 0
+				OR @find_block_leaders = 1
+			UNION ALL
+			SELECT '[blocked_session_count]', 39
+			WHERE
+				@find_block_leaders = 1
+			UNION ALL
+			SELECT '[percent_complete]', 40
+			UNION ALL
+			SELECT '[host_name]', 41
+			UNION ALL
+			SELECT '[login_name]', 42
+			UNION ALL
+			SELECT '[database_name]', 43
+			UNION ALL
+			SELECT '[program_name]', 44
+			UNION ALL
+			SELECT '[additional_info]', 45
+			WHERE
+				@get_additional_info = 1
+			UNION ALL
+			SELECT '[memory_info]', 46
+			WHERE
+				@get_memory_info = 1
+			UNION ALL
+			SELECT '[start_time]', 47
+			UNION ALL
+			SELECT '[login_time]', 48
+			UNION ALL
+			SELECT '[request_id]', 49
+			UNION ALL
+			SELECT '[collection_time]', 50
 		) AS x ON
 			x.column_name LIKE token ESCAPE '|'
 	)
@@ -1314,6 +1324,7 @@ BEGIN;
 		transaction_id BIGINT NULL,
 		tran_start_time DATETIME NULL,
 		tran_log_writes NVARCHAR(4000) NULL,
+		implicit_tran NVARCHAR(3) NULL,
 		open_tran_count SMALLINT NULL,
 		sql_command XML NULL,
 		sql_handle VARBINARY(64) NULL,
@@ -2960,8 +2971,8 @@ BEGIN;
 												N'':'' +
 													SUBSTRING
 													(
-																						y.resource_description,
-																						CHARINDEX(N''nodeId'', y.resource_description) + 7,
+														y.resource_description,
+														CHARINDEX(N''nodeId'', y.resource_description) + 7,
 														CASE
 															WHEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description)) > 0
 															THEN CHARINDEX(N'' '', y.resource_description, CHARINDEX(N''nodeId'', y.resource_description) + 7) - 7 - CHARINDEX(N''nodeId'', y.resource_description)
@@ -3775,6 +3786,7 @@ BEGIN;
 			(
 				@output_column_list LIKE '%|[tran_start_time|]%' ESCAPE '|'
 				OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|'
+				OR @output_column_list LIKE '%|[implicit_tran|]%' ESCAPE '|'
 			)
 		BEGIN;	
 			DECLARE @i INT;
@@ -3798,13 +3810,19 @@ BEGIN;
 					(
 						x.trans_info,
 						LEN(x.trans_info) - CHARINDEX(NCHAR(254) COLLATE Latin1_General_Bin2, x.trans_info)
-					)
+					),
+				implicit_tran =
+					CASE
+						WHEN x.implicit_tran = 1 THEN 'ON'
+						ELSE 'OFF'
+					END
 			FROM
 			(
 				SELECT TOP(@i)
 					trans_nodes.trans_node.value('(session_id/text())[1]', 'SMALLINT') AS session_id,
 					COALESCE(trans_nodes.trans_node.value('(request_id/text())[1]', 'INT'), 0) AS request_id,
-					trans_nodes.trans_node.value('(trans_info/text())[1]', 'NVARCHAR(4000)') AS trans_info				
+					trans_nodes.trans_node.value('(implicit_tran/text())[1]', 'INT') AS implicit_tran,
+					trans_nodes.trans_node.value('(trans_info/text())[1]', 'NVARCHAR(4000)') AS trans_info
 				FROM
 				(
 					SELECT TOP(@i)
@@ -3828,6 +3846,7 @@ BEGIN;
 								WHEN 1 THEN u_trans.request_id
 								ELSE NULL
 							END AS [request_id],
+							u_trans.implicit_tran AS [implicit_tran],
 							CONVERT
 							(
 								NVARCHAR(MAX),
@@ -3876,7 +3895,14 @@ BEGIN;
 									s_tran.database_id,
 									COALESCE(SUM(s_tran.database_transaction_log_record_count), 0) AS log_record_count,
 									COALESCE(SUM(s_tran.database_transaction_log_bytes_used), 0) / 1024 AS log_kb_used,
-									MIN(s_tran.database_transaction_begin_time) AS transaction_start_time
+									MIN(s_tran.database_transaction_begin_time) AS transaction_start_time,
+									MAX
+									(
+										CASE
+											WHEN a_tran.name = 'implicit_transaction' THEN 1
+											ELSE 0
+										END
+									) AS implicit_tran
 								FROM
 								(
 									SELECT TOP(@i)
@@ -5432,6 +5458,7 @@ BEGIN;
 					'locks, ' +
 					'tran_start_time, ' +
 					'LEFT(tran_log_writes, LEN(tran_log_writes) - 1) AS tran_log_writes, ' +
+					'implicit_tran, ' +
 					--open_tran_count
 					CASE @format_output
 						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, open_tran_count))) OVER() - LEN(CONVERT(VARCHAR, open_tran_count))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, open_tran_count), 1), 19)) AS '
