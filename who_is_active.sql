@@ -88,9 +88,11 @@ ALTER PROC dbo.sp_WhoIsActive
 	--applock_hash, metadata_resource, metadata_class_id, object_name, schema_name
 	@get_additional_info BIT = 0,
 
-	--When enabled (available for SQL Server 2008 or greater) causes four additional top-level columns
-	--to appear: requested_memory, granted_memory, max_used_memory, and memory_grant_info.
-	@get_memory_grant_info BIT = 0,
+	--Get additional information related to workspace memory
+	--requested_memory, granted_memory, max_used_memory, and memory_info.
+	--
+	--Not available for SQL Server 2005.
+	@get_memory_info BIT = 0,
 
 	--Walk the blocking chain and count the number of
 	--total SPIDs blocked all the way down by a given session
@@ -210,19 +212,19 @@ Non-Formatted:	[used_memory] [bigint] NOT NULL
 
 Formatted:		[max_used_memory] [varchar](30) NULL
 Non-Formatted:	[max_used_memory] [bigint] NULL
-	(Requires @get_memory_grant_info = 1)
+	(Requires @get_memory_info = 1)
 	For an active request, the maximum amount of memory that has been used during
 	processing up to the point of observation for the current query
 
 Formatted:		[requested_memory] [varchar](30) NULL
 Non-Formatted:	[requested_memory] [bigint] NULL
-	(Requires @get_memory_grant_info = 1)
+	(Requires @get_memory_info = 1)
 	For an active request, the amount of memory requested by the query processor
 	for hash, sort, and parallelism operations
 
 Formatted:		[granted_memory] [varchar](30) NULL
 Non-Formatted:	[granted_memory] [bigint] NULL
-	(Requires @get_memory_grant_info = 1)
+	(Requires @get_memory_info = 1)
 	For an active request, the amount of memory granted to the query processor
 	for hash, sort, and parallelism operations
 
@@ -396,8 +398,8 @@ Formatted/Non:	[request_id] [int] NULL
 Formatted/Non:	[collection_time] [datetime] NOT NULL
 	Time that this script's final SELECT ran
 
-Formatted/Non:	[memory_grant_info] [xml] NULL
-	(Requires @get_memory_grant_info)
+Formatted/Non:	[memory_info] [xml] NULL
+	(Requires @get_memory_info)
 	Returns memory grant information from several key DMVs
 	in an XML format. The fields presented are:
 	[request_time], [grant_time], [wait_time_ms], [requested_memory_kb],
@@ -502,7 +504,7 @@ BEGIN;
 		RETURN;
 	END;
 	
-	IF @get_memory_grant_info = 1 AND @sql_version < 1001600
+	IF @get_memory_info = 1 AND @sql_version < 1001600
 	BEGIN;
 		RAISERROR('Advanced memory options are not available for SQL Server 2005.', 16, 1);
 		RETURN;
@@ -1059,26 +1061,26 @@ BEGIN;
 			UNION ALL
 			SELECT '[collection_time]', 44
 			UNION ALL
-			SELECT '[memory_grant_info]', 23
+			SELECT '[memory_info]', 23
 			WHERE
-				@get_memory_grant_info = 1
+				@get_memory_info = 1
 			UNION ALL
 			SELECT '[max_used_memory]', 14
 			WHERE
-				@get_memory_grant_info = 1
+				@get_memory_info = 1
 			UNION ALL
 			SELECT '[requested_memory]', 14
 			WHERE
-				@get_memory_grant_info = 1
+				@get_memory_info = 1
 			UNION ALL
 			SELECT '[granted_memory]', 14
 			WHERE
-				@get_memory_grant_info = 1
+				@get_memory_info = 1
 			UNION ALL
 			SELECT '[max_used_memory_delta]', 23
 			WHERE
 				@delta_interval > 0
-				AND @get_memory_grant_info = 1
+				AND @get_memory_info = 1
 		) AS x ON
 			x.column_name LIKE token ESCAPE '|'
 	)
@@ -1328,7 +1330,7 @@ BEGIN;
 		database_name sysname NULL,
 		program_name sysname NULL,
 		additional_info XML NULL,
-		memory_grant_info XML NULL,
+		memory_info XML NULL,
 		start_time DATETIME NOT NULL,
 		login_time DATETIME NULL,
 		last_request_start_time DATETIME NULL,
@@ -2459,7 +2461,7 @@ BEGIN;
 						OR @output_column_list LIKE '%|[used_memory_delta|]%' ESCAPE '|'
 							THEN
 								CASE
-									WHEN @get_memory_grant_info = 1 THEN
+									WHEN @get_memory_info = 1 THEN
 										'COALESCE(x.mg_used_memory_kb / 8, x.used_memory) '
 									ELSE
 										'x.used_memory '
@@ -2807,8 +2809,8 @@ BEGIN;
 					' +
 				CASE
 					WHEN
-						@output_column_list LIKE '%|[memory_grant_info|]%' ESCAPE '|'
-						AND @get_memory_grant_info = 1 THEN'
+						@output_column_list LIKE '%|[memory_info|]%' ESCAPE '|'
+						AND @get_memory_info = 1 THEN'
 						(
 							SELECT TOP(@i)
 							(
@@ -2869,13 +2871,13 @@ BEGIN;
 									TYPE
 							)
 							FOR XML
-								PATH(''memory_counters''),
+								PATH(''memory_info''),
 								TYPE
 						)				
 					'
 					ELSE
 						'NULL '
-				END + 'AS memory_grant_info,
+				END + 'AS memory_info,
 				x.start_time,
 				'
 				+
@@ -3010,7 +3012,7 @@ BEGIN;
 						COALESCE(r.CPU_time, s.CPU_time) AS CPU,
 						' +
 						CASE
-							WHEN @get_memory_grant_info = 1 THEN
+							WHEN @get_memory_info = 1 THEN
 								'sp.memory_usage AS used_memory,
 								mg.used_memory_kb AS mg_used_memory_kb,
 								mg.max_used_memory_kb,
@@ -3145,7 +3147,7 @@ BEGIN;
 							END + '
 					FROM ' +
 					CASE
-						WHEN @get_memory_grant_info = 1 THEN
+						WHEN @get_memory_info = 1 THEN
 							'(
 								SELECT TOP(@i)
 									rp0.*
@@ -3756,7 +3758,7 @@ BEGIN;
 			database_name,
 			program_name,
 			additional_info,
-			memory_grant_info,
+			memory_info,
 			start_time,
 			login_time,
 			last_request_start_time
@@ -5465,7 +5467,7 @@ BEGIN;
 					'database_name, ' +
 					'program_name, ' +
 					'additional_info, ' +
-					'memory_grant_info, ' +
+					'memory_info, ' +
 					'start_time, ' +
 					'login_time, ' +
 					'CASE ' +
