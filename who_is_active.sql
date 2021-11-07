@@ -327,8 +327,8 @@ Formatted/Non:	[tran_log_writes] [nvarchar](4000) NULL
 
 Formatted/Non:	[implicit_tran] [nvarchar](3) NULL
 	(Requires @get_transaction_info option)
-	Returns "ON" if a transaction has been started as a result of the session using the
-	implicit_transactions option, or "OFF" otherwise.
+	For active read-write transactions, returns on "ON" the transaction has been started as a result
+	of the session using the implicit_transactions option, or "OFF" otherwise.
 
 Formatted:		[open_tran_count] [varchar](30) NULL
 Non-Formatted:	[open_tran_count] [smallint] NULL
