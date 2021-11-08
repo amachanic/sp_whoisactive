@@ -2058,8 +2058,8 @@ BEGIN;
 									(
 										LEFT
 										(
-											sp2.waitresource,
-											ISNULL(NULLIF(CHARINDEX('' (LATCH '', sp2.waitresource) - 1, -1), 256)
+											sp2.waitresource COLLATE Latin1_General_Bin2,
+											ISNULL(NULLIF(CHARINDEX('' (LATCH '', sp2.waitresource COLLATE Latin1_General_Bin2) - 1, -1), 256)
 										)
 									) AS wait_resource
 							) AS v2
@@ -3292,7 +3292,11 @@ BEGIN;
 													(
 														SELECT TOP(@i)
 															wt0.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
-															wt0.resource_description COLLATE Latin1_General_Bin2 AS resource_description,
+															LEFT
+															(
+																p.resource_description,
+																ISNULL(NULLIF(CHARINDEX('' (LATCH '', p.resource_description) - 1, -1), 256)
+															) AS resource_description,
 															wt0.wait_duration_ms,
 															wt0.waiting_task_address,
 															CASE
@@ -3305,7 +3309,8 @@ BEGIN;
 														CROSS APPLY
 														(
 															SELECT TOP(1)
-																s0.blocked
+																s0.blocked,
+																wt0.resource_description COLLATE Latin1_General_Bin2 AS resource_description
 															FROM @sessions AS s0
 															WHERE
 																s0.session_id = wt0.session_id
