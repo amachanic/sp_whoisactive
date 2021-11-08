@@ -1383,11 +1383,28 @@ BEGIN;
 
 		--Used for the delta pull
 		REDO:;
-		
-		IF
-			@get_locks = 1
-			AND @recursion = 1
-			AND @output_column_list LIKE '%|[locks|]%' ESCAPE '|'
+
+		DECLARE
+			@process_locks BIT =
+				CASE
+					WHEN
+						@get_locks = 1
+						AND @recursion = 1
+						AND @output_column_list LIKE '%|[locks|]%' ESCAPE '|'
+							THEN 1
+					ELSE 0
+				END,
+			@process_additional_info BIT =
+				CASE
+					WHEN
+						@get_task_info = 2
+						AND @recursion = 1
+						AND @output_column_list LIKE '%|[additional_info|]%' ESCAPE '|'
+							THEN 1
+					ELSE 0
+				END;
+
+		IF @process_locks = 1
 		BEGIN;
 			SELECT
 				y.resource_type,
@@ -3991,50 +4008,7 @@ BEGIN;
 			@statement_start_offset INT,
 			@statement_end_offset INT,
 			@start_time DATETIME,
-			@database_name SYSNAME,
-			@server_name SYSNAME = @@SERVERNAME,
-			@skip_databases_sql NVARCHAR(MAX) = N'
-				SELECT
-					d.name
-				FROM sys.databases AS d
-				INNER JOIN sys.availability_replicas AS r
-					ON d.replica_id = r.replica_id
-				WHERE NOT EXISTS
-					  (
-						  SELECT
-							  1/0
-						  FROM sys.dm_hadr_availability_group_states AS s
-						  WHERE s.primary_replica = r.replica_server_name
-					  )
-				AND r.secondary_role_allow_connections_desc = ''READ_ONLY''
-				AND r.replica_server_name = @server_name
-				OPTION (RECOMPILE);';
-
-		IF EXISTS 
-		(
-			SELECT
-				1/0
-			FROM sys.all_objects ao 
-			WHERE ao.name = N'dm_hadr_database_replica_states'
-		)
-		BEGIN
-			
-			DECLARE 
-				@skip_databases table 
-			(
-				database_name sysname
-			);	
-		
-			INSERT  
-				@skip_databases
-			(
-				database_name
-			)
-			EXEC sys.sp_executesql
-				@skip_databases_sql,
-			  N'@server_name sysname',
-				@server_name;	  
-		END;
+			@database_name SYSNAME;
 
 		IF
 			@recursion = 1
@@ -4510,10 +4484,58 @@ BEGIN;
 			DEALLOCATE plan_cursor;
 		END;
 
+		--Databases to skip due to not being available on this server
+		DECLARE @skip_databases TABLE
+		(
+			database_name SYSNAME NOT NULL PRIMARY KEY
+		);
+
 		IF
-			@get_locks = 1
-			AND @recursion = 1
-			AND @output_column_list LIKE '%|[locks|]%' ESCAPE '|'
+			(
+				@process_locks = 1
+				OR @process_additional_info = 1
+			)
+			AND EXISTS 
+			(
+				SELECT
+					*
+				FROM sys.all_objects AS ao 
+				WHERE
+					ao.name = N'dm_hadr_database_replica_states'
+			)
+		BEGIN
+			DECLARE @skip_databases_sql NVARCHAR(MAX) = N'
+				SELECT
+					d.name
+				FROM sys.databases AS d
+				WHERE
+					EXISTS
+					(
+						SELECT
+							*
+						FROM sys.availability_replicas AS r
+						WHERE
+							r.replica_id = d.replica_id
+							AND NOT EXISTS
+							(
+								SELECT
+									*
+								FROM sys.dm_hadr_availability_group_states AS s
+								WHERE
+									s.primary_replica = r.replica_server_name
+							)
+							AND r.secondary_role_allow_connections_desc = ''READ_ONLY''
+							AND r.replica_server_name = @@SERVERNAME
+					);';
+
+			INSERT INTO @skip_databases
+			(
+				database_name
+			)
+			EXEC @skip_databases_sql;
+		END;
+
+		IF @process_locks = 1
 		BEGIN;
 			DECLARE locks_cursor
 			CURSOR LOCAL FAST_FORWARD
@@ -4847,10 +4869,7 @@ BEGIN;
 				s.recursion = 1;
 		END;
 
-		IF
-			@get_task_info = 2
-			AND @output_column_list LIKE '%|[additional_info|]%' ESCAPE '|'
-			AND @recursion = 1
+		IF @process_additional_info = 1
 		BEGIN;
 			CREATE TABLE #blocked_requests
 			(
@@ -4918,15 +4937,17 @@ BEGIN;
 			CURSOR LOCAL FAST_FORWARD
 			FOR
 				SELECT DISTINCT
-					database_name
-				FROM #blocked_requests
-				WHERE NOT EXISTS
-					  (
-						  SELECT
-							  1/0
-						  FROM @skip_databases AS sd
-						  WHERE sd.database_name = #blocked_requests.database_name
-					  );
+					b.database_name
+				FROM #blocked_requests AS b
+				WHERE
+					NOT EXISTS
+					(
+						SELECT
+							*
+						FROM @skip_databases AS sd
+						WHERE
+							sd.database_name = b.database_name
+					);
 				
 			OPEN blocks_cursor;
 			
