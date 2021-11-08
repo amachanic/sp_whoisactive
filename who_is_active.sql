@@ -4678,7 +4678,18 @@ BEGIN;
 											ELSE NULL
 										END AS [Lock/@schema_name],
 										l4.principal_name AS [Lock/@principal_name],
-										l4.resource_description AS [Lock/@resource_description],
+										REPLACE
+										(
+											REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+											REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+											REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+												l4.resource_description COLLATE Latin1_General_Bin2,
+												NCHAR(31),N'?'),NCHAR(30),N'?'),NCHAR(29),N'?'),NCHAR(28),N'?'),NCHAR(27),N'?'),NCHAR(26),N'?'),NCHAR(25),N'?'),NCHAR(24),N'?'),NCHAR(23),N'?'),NCHAR(22),N'?'),
+												NCHAR(21),N'?'),NCHAR(20),N'?'),NCHAR(19),N'?'),NCHAR(18),N'?'),NCHAR(17),N'?'),NCHAR(16),N'?'),NCHAR(15),N'?'),NCHAR(14),N'?'),NCHAR(12),N'?'),
+												NCHAR(11),N'?'),NCHAR(8),N'?'),NCHAR(7),N'?'),NCHAR(6),N'?'),NCHAR(5),N'?'),NCHAR(4),N'?'),NCHAR(3),N'?'),NCHAR(2),N'?'),NCHAR(1),N'?'),
+											NCHAR(0),
+											N''
+										) AS [Lock/@resource_description],
 										l4.request_mode AS [Lock/@request_mode],
 										l4.request_status AS [Lock/@request_status],
 										SUM(l4.request_count) AS [Lock/@request_count]
