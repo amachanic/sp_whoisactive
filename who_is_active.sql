@@ -2075,12 +2075,7 @@ BEGIN;
 						(
 							SELECT TOP(@i)
 								sp2.spid AS session_id,
-								CASE sp2.status
-									WHEN ''sleeping'' THEN
-										CONVERT(INT, 0)
-									ELSE
-										sp2.request_id
-								END AS request_id,
+								v2.request_id,
 								MAX(sp2.login_time) AS login_time,
 								MAX(sp2.last_batch) AS last_request_end_time,
 								MAX(CONVERT(VARCHAR(30), RTRIM(sp2.status)) COLLATE Latin1_General_Bin2) AS status,
@@ -2109,7 +2104,7 @@ BEGIN;
 								MAX(sp2.memusage) AS memory_usage,
 								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
-								RTRIM(sp2.waitresource) AS wait_resource,
+								v2.wait_resource,
 								MAX(sp2.waittime) AS wait_time,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0) AS blocked,
 								MAX
@@ -2168,6 +2163,24 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
+							CROSS APPLY
+							(
+								SELECT
+									CASE sp2.status
+										WHEN ''sleeping'' THEN
+											CONVERT(INT, 0)
+										ELSE
+											sp2.request_id
+									END AS request_id,
+									RTRIM
+									(
+										LEFT
+										(
+											sp2.waitresource COLLATE Latin1_General_Bin2,
+											ISNULL(NULLIF(CHARINDEX('' (LATCH '', sp2.waitresource COLLATE Latin1_General_Bin2) - 1, -1), 256)
+										)
+									) AS wait_resource
+							) AS v2
 							' +
 							CASE
 								WHEN
@@ -2183,14 +2196,9 @@ BEGIN;
 							END +
 							'GROUP BY
 								sp2.spid,
-								CASE sp2.status
-									WHEN ''sleeping'' THEN
-										CONVERT(INT, 0)
-									ELSE
-										sp2.request_id
-								END,
+								v2.request_id,
 								RTRIM(sp2.lastwaittype),
-								RTRIM(sp2.waitresource),
+								v2.wait_resource,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0)
 						) AS sp1
 					) AS sp0
@@ -3577,7 +3585,11 @@ BEGIN;
 													(
 														SELECT TOP(@i)
 															wt0.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
-															wt0.resource_description COLLATE Latin1_General_Bin2 AS resource_description,
+															LEFT
+															(
+																p.resource_description,
+																ISNULL(NULLIF(CHARINDEX('' (LATCH '', p.resource_description) - 1, -1), 256)
+															) AS resource_description,
 															wt0.wait_duration_ms,
 															wt0.waiting_task_address,
 															CASE
@@ -3590,7 +3602,8 @@ BEGIN;
 														CROSS APPLY
 														(
 															SELECT TOP(1)
-																s0.blocked
+																s0.blocked,
+																wt0.resource_description COLLATE Latin1_General_Bin2 AS resource_description
 															FROM @sessions AS s0
 															WHERE
 																s0.session_id = wt0.session_id
