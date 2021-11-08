@@ -2814,7 +2814,7 @@ BEGIN;
 											WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
 												'master.dbo.fn_varbintohexstr(x.context_info) AS context_info'
 											ELSE
-												'x.context_info'
+												'CONVERT(VARCHAR(256), x.context_info, 1) AS context_info'
 										END + '
 									FOR XML
 										PATH(''additional_info''),
