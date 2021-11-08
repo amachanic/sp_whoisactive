@@ -4556,9 +4556,10 @@ BEGIN;
 					AND NOT EXISTS
 						(
 							SELECT
-								1/0
+								*
 							FROM @skip_databases AS sd
-							WHERE sd.database_name = #locks.database_name
+							WHERE
+								sd.database_name = #locks.database_name
 						)
 				OPTION (KEEPFIXED PLAN);
 
