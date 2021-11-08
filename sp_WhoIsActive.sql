@@ -2075,12 +2075,7 @@ BEGIN;
 						(
 							SELECT TOP(@i)
 								sp2.spid AS session_id,
-								CASE sp2.status
-									WHEN ''sleeping'' THEN
-										CONVERT(INT, 0)
-									ELSE
-										sp2.request_id
-								END AS request_id,
+								v2.request_id,
 								MAX(sp2.login_time) AS login_time,
 								MAX(sp2.last_batch) AS last_request_end_time,
 								MAX(CONVERT(VARCHAR(30), RTRIM(sp2.status)) COLLATE Latin1_General_Bin2) AS status,
@@ -2109,7 +2104,7 @@ BEGIN;
 								MAX(sp2.memusage) AS memory_usage,
 								MAX(sp2.open_tran) AS open_tran_count,
 								RTRIM(sp2.lastwaittype) AS wait_type,
-								RTRIM(sp2.waitresource) AS wait_resource,
+								v2.wait_resource,
 								MAX(sp2.waittime) AS wait_time,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0) AS blocked,
 								MAX
@@ -2168,6 +2163,24 @@ BEGIN;
 									blk.session_id = 0
 									AND @blocker = 0
 								)
+							CROSS APPLY
+							(
+								SELECT
+									CASE sp2.status
+										WHEN ''sleeping'' THEN
+											CONVERT(INT, 0)
+										ELSE
+											sp2.request_id
+									END AS request_id,
+									RTRIM
+									(
+										LEFT
+										(
+											sp2.waitresource COLLATE Latin1_General_Bin2,
+											ISNULL(NULLIF(CHARINDEX('' (LATCH '', sp2.waitresource COLLATE Latin1_General_Bin2) - 1, -1), 256)
+										)
+									) AS wait_resource
+							) AS v2
 							' +
 							CASE
 								WHEN
@@ -2183,14 +2196,9 @@ BEGIN;
 							END +
 							'GROUP BY
 								sp2.spid,
-								CASE sp2.status
-									WHEN ''sleeping'' THEN
-										CONVERT(INT, 0)
-									ELSE
-										sp2.request_id
-								END,
+								v2.request_id,
 								RTRIM(sp2.lastwaittype),
-								RTRIM(sp2.waitresource),
+								v2.wait_resource,
 								COALESCE(NULLIF(sp2.blocked, sp2.spid), 0)
 						) AS sp1
 					) AS sp0
@@ -3577,7 +3585,11 @@ BEGIN;
 													(
 														SELECT TOP(@i)
 															wt0.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
-															wt0.resource_description COLLATE Latin1_General_Bin2 AS resource_description,
+															LEFT
+															(
+																p.resource_description,
+																ISNULL(NULLIF(CHARINDEX('' (LATCH '', p.resource_description) - 1, -1), 256)
+															) AS resource_description,
 															wt0.wait_duration_ms,
 															wt0.waiting_task_address,
 															CASE
@@ -3590,7 +3602,8 @@ BEGIN;
 														CROSS APPLY
 														(
 															SELECT TOP(1)
-																s0.blocked
+																s0.blocked,
+																wt0.resource_description COLLATE Latin1_General_Bin2 AS resource_description
 															FROM @sessions AS s0
 															WHERE
 																s0.session_id = wt0.session_id
@@ -5157,6 +5170,29 @@ BEGIN;
 		END;
 	END;
 
+	DECLARE
+		@num_data_threshold MONEY = 919919919919919,
+		@num_col_fmt VARCHAR(500) =
+			CASE @format_output
+				WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
+				WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
+				ELSE ''
+			END + '[col_name], ',
+		@num_delta_col_fmt VARCHAR(1000) =
+			'CASE ' +
+				'WHEN ' +
+					'first_request_start_time = last_request_start_time ' +
+					'AND num_events = 2 ' +
+					'AND [col_name] >= 0 ' +
+						'THEN ' +
+						CASE @format_output
+							WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
+							WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
+							ELSE '[col_name] '
+						END +
+				'ELSE NULL ' +
+			'END AS [col_name], ';
+
 	SET @sql =
 		--Outer column list
 		CONVERT
@@ -5236,165 +5272,29 @@ BEGIN;
 						ELSE
 							'avg_elapsed_time, '
 					END +
-					--physical_io
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, physical_io))) OVER() - LEN(CONVERT(VARCHAR, physical_io))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_io), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_io), 1), 19)) AS '
-						ELSE ''
-					END + 'physical_io, ' +
-					--reads
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, reads))) OVER() - LEN(CONVERT(VARCHAR, reads))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, reads), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, reads), 1), 19)) AS '
-						ELSE ''
-					END + 'reads, ' +
-					--physical_reads
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, physical_reads))) OVER() - LEN(CONVERT(VARCHAR, physical_reads))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_reads), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_reads), 1), 19)) AS '
-						ELSE ''
-					END + 'physical_reads, ' +
-					--writes
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, writes))) OVER() - LEN(CONVERT(VARCHAR, writes))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, writes), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, writes), 1), 19)) AS '
-						ELSE ''
-					END + 'writes, ' +
-					--tempdb_allocations
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, tempdb_allocations))) OVER() - LEN(CONVERT(VARCHAR, tempdb_allocations))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_allocations), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_allocations), 1), 19)) AS '
-						ELSE ''
-					END + 'tempdb_allocations, ' +
-					--tempdb_current
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, tempdb_current))) OVER() - LEN(CONVERT(VARCHAR, tempdb_current))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_current), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_current), 1), 19)) AS '
-						ELSE ''
-					END + 'tempdb_current, ' +
-					--CPU
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, CPU))) OVER() - LEN(CONVERT(VARCHAR, CPU))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU), 1), 19)) AS '
-						ELSE ''
-					END + 'CPU, ' +
-					--context_switches
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, context_switches))) OVER() - LEN(CONVERT(VARCHAR, context_switches))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, context_switches), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, context_switches), 1), 19)) AS '
-						ELSE ''
-					END + 'context_switches, ' +
-					--used_memory
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, used_memory))) OVER() - LEN(CONVERT(VARCHAR, used_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory), 1), 19)) AS '
-						ELSE ''
-					END + 'used_memory, ' +
-					--max_used_memory
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, max_used_memory))) OVER() - LEN(CONVERT(VARCHAR, max_used_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory), 1), 19)) AS '
-						ELSE ''
-					END + 'max_used_memory, ' +
-					--requested_memory
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, requested_memory))) OVER() - LEN(CONVERT(VARCHAR, requested_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, requested_memory), 1), 19)) AS '
-						ELSE ''
-					END + 'requested_memory, ' +
-					--granted_memory
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, granted_memory))) OVER() - LEN(CONVERT(VARCHAR, granted_memory))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, granted_memory), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, granted_memory), 1), 19)) AS '
-						ELSE ''
-					END + 'granted_memory, ' +
+					REPLACE(@num_col_fmt, '[col_name]', 'physical_io') +
+					REPLACE(@num_col_fmt, '[col_name]', 'reads') +
+					REPLACE(@num_col_fmt, '[col_name]', 'physical_reads') +
+					REPLACE(@num_col_fmt, '[col_name]', 'writes') +
+					REPLACE(@num_col_fmt, '[col_name]', 'tempdb_allocations') +
+					REPLACE(@num_col_fmt, '[col_name]', 'tempdb_current') +
+					REPLACE(@num_col_fmt, '[col_name]', 'CPU') +
+					REPLACE(@num_col_fmt, '[col_name]', 'context_switches') +
+					REPLACE(@num_col_fmt, '[col_name]', 'used_memory') +
+					REPLACE(@num_col_fmt, '[col_name]', 'max_used_memory') +
+					REPLACE(@num_col_fmt, '[col_name]', 'requested_memory') +
+					REPLACE(@num_col_fmt, '[col_name]', 'granted_memory') +
 					CASE
 						WHEN @output_column_list LIKE '%|_delta|]%' ESCAPE '|' THEN
-							--physical_io_delta			
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND physical_io_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, physical_io_delta))) OVER() - LEN(CONVERT(VARCHAR, physical_io_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_io_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_io_delta), 1), 19)) '
-											ELSE 'physical_io_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS physical_io_delta, ' +
-							--reads_delta
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND reads_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, reads_delta))) OVER() - LEN(CONVERT(VARCHAR, reads_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, reads_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, reads_delta), 1), 19)) '
-											ELSE 'reads_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS reads_delta, ' +
-							--physical_reads_delta
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND physical_reads_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, physical_reads_delta))) OVER() - LEN(CONVERT(VARCHAR, physical_reads_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_reads_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, physical_reads_delta), 1), 19)) '
-											ELSE 'physical_reads_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS physical_reads_delta, ' +
-							--writes_delta
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND writes_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, writes_delta))) OVER() - LEN(CONVERT(VARCHAR, writes_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, writes_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, writes_delta), 1), 19)) '
-											ELSE 'writes_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS writes_delta, ' +
-							--tempdb_allocations_delta
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND tempdb_allocations_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, tempdb_allocations_delta))) OVER() - LEN(CONVERT(VARCHAR, tempdb_allocations_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_allocations_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_allocations_delta), 1), 19)) '
-											ELSE 'tempdb_allocations_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS tempdb_allocations_delta, ' +
-							--tempdb_current_delta
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'physical_io_delta') +
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'reads_delta') +
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'physical_reads_delta') +
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'writes_delta') +
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'tempdb_allocations_delta') +
 							--this is the only one that can (legitimately) go negative
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, tempdb_current_delta))) OVER() - LEN(CONVERT(VARCHAR, tempdb_current_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_current_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tempdb_current_delta), 1), 19)) '
-											ELSE 'tempdb_current_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS tempdb_current_delta, ' +
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'tempdb_current_delta') +
 							--CPU_delta
+							--leaving this one hardcoded, as there is a bit of different interaction here
 							'CASE ' +
 								'WHEN ' +
 									'first_request_start_time = last_request_start_time ' +
@@ -5406,14 +5306,14 @@ BEGIN;
 													'AND thread_CPU_delta > 0 ' +
 														'THEN ' +
 															CASE @format_output
-																WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, thread_CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, thread_CPU_delta), 1), 19)) '
-																WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, thread_CPU_delta), 1), 19)) '
+																WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, thread_CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
+																WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
 																ELSE 'thread_CPU_delta '
 															END +
 												'WHEN CPU_delta >= 0 THEN ' +
 													CASE @format_output
-														WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU_delta), 1), 19)) '
-														WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CPU_delta), 1), 19)) '
+														WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
+														WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
 														ELSE 'CPU_delta '
 													END +
 												'ELSE NULL ' +
@@ -5421,69 +5321,19 @@ BEGIN;
 								'ELSE ' +
 									'NULL ' +
 							'END AS CPU_delta, ' +
-							--context_switches_delta
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND context_switches_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, context_switches_delta))) OVER() - LEN(CONVERT(VARCHAR, context_switches_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, context_switches_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, context_switches_delta), 1), 19)) '
-											ELSE 'context_switches_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS context_switches_delta, ' +
-							--used_memory_delta
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND used_memory_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, used_memory_delta))) OVER() - LEN(CONVERT(VARCHAR, used_memory_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, used_memory_delta), 1), 19)) '
-											ELSE 'used_memory_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS used_memory_delta,
-							' +
-							--max_used_memory_delta
-							'CASE ' +
-								'WHEN ' +
-									'first_request_start_time = last_request_start_time ' +
-									'AND num_events = 2 ' +
-									'AND max_used_memory_delta >= 0 ' +
-										'THEN ' +
-										CASE @format_output
-											WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, max_used_memory_delta))) OVER() - LEN(CONVERT(VARCHAR, max_used_memory_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory_delta), 1), 19)) '
-											WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, max_used_memory_delta), 1), 19)) '
-											ELSE 'max_used_memory_delta '
-										END +
-								'ELSE NULL ' +
-							'END AS max_used_memory_delta, '
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'context_switches_delta') +
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'used_memory_delta') +
+							REPLACE(@num_delta_col_fmt, '[col_name]', 'max_used_memory_delta')
 						ELSE ''
 					END +
-					--tasks
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, tasks))) OVER() - LEN(CONVERT(VARCHAR, tasks))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tasks), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, tasks), 1), 19)) '
-						ELSE ''
-					END + 'tasks, ' +
+					REPLACE(@num_col_fmt, '[col_name]', 'tasks') +
 					'status, ' +
 					'wait_info, ' +
 					'locks, ' +
 					'tran_start_time, ' +
 					'LEFT(tran_log_writes, LEN(tran_log_writes) - 1) AS tran_log_writes, ' +
 					'implicit_tran, ' +
-					--open_tran_count
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, open_tran_count))) OVER() - LEN(CONVERT(VARCHAR, open_tran_count))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, open_tran_count), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, open_tran_count), 1), 19)) AS '
-						ELSE ''
-					END + 'open_tran_count, ' +
+					REPLACE(@num_col_fmt, '[col_name]', 'open_tran_count') +
 					--sql_command
 					CASE @format_output
 						WHEN 0 THEN 'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
@@ -5496,18 +5346,8 @@ BEGIN;
 					END + 'sql_text, ' +
 					'query_plan, ' +
 					'blocking_session_id, ' +
-					--blocked_session_count
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, blocked_session_count))) OVER() - LEN(CONVERT(VARCHAR, blocked_session_count))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, blocked_session_count), 1), 19)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, blocked_session_count), 1), 19)) AS '
-						ELSE ''
-					END + 'blocked_session_count, ' +
-					--percent_complete
-					CASE @format_output
-						WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, CONVERT(MONEY, percent_complete), 2))) OVER() - LEN(CONVERT(VARCHAR, CONVERT(MONEY, percent_complete), 2))) + CONVERT(CHAR(22), CONVERT(MONEY, percent_complete), 2)) AS '
-						WHEN 2 THEN 'CONVERT(VARCHAR, CONVERT(CHAR(22), CONVERT(MONEY, percent_complete), 1)) AS '
-						ELSE ''
-					END + 'percent_complete, ' +
+					REPLACE(@num_col_fmt, '[col_name]', 'blocked_session_count') +
+					REPLACE(@num_col_fmt, '[col_name]', 'percent_complete') +
 					'host_name, ' +
 					'login_name, ' +
 					'database_name, ' +
@@ -5649,7 +5489,7 @@ BEGIN;
 
 	EXEC sp_executesql
 		@sql_n,
-		N'@schema VARCHAR(MAX) OUTPUT',
-		@schema OUTPUT;
+		N'@num_data_threshold MONEY, @schema VARCHAR(MAX) OUTPUT',
+		@num_data_threshold, @schema OUTPUT;
 END;
 GO
