@@ -11,7 +11,7 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v12.00-RC2 (2021-11-09)
+Who Is Active? v12.00-RC3 (2021-11-09)
 (C) 2007-2021, Adam Machanic
 
 Feedback: https://github.com/amachanic/sp_whoisactive/issues
@@ -406,17 +406,8 @@ Formatted/Non:    [collection_time] [datetime] NOT NULL
 
 Formatted/Non:    [memory_info] [xml] NULL
     (Requires @get_memory_info)
-    Returns memory grant information from several key DMVs
-    in an XML format. The fields presented are:
-    [request_time], [grant_time], [wait_time_ms], [requested_memory_kb],
-    [granted_memory_kb], [used_memory_kb], [max_used_memory_kb], [ideal_memory_kb],
-    [required_memory_kb], [queue_id], [wait_order], [is_next_candidate], [dop],
-    [query_subtree_cost], [timeout_error_count], [target_memory_mb],
-    [max_target_memory_kb], [total_memory_kb], [available_memory_kb],
-    [granted_memory_kb], [used_memory_kb], [grantee_count], [waiter_count],
-    [request_max_memory_grant_percent], [request_max_cpu_time_sec],
-    [request_memory_grant_timeout_sec], [max_dop], [min_memory_percent],
-    [max_memory_percent], [min_cpu_percent], [max_cpu_percent]
+    For active queries that require workspace memory, returns information on memory grants,
+    resource semaphores, and the resource governor settings that are impacting the allocation.
 */
 AS
 BEGIN;
@@ -507,7 +498,7 @@ BEGIN;
     END;
 
     IF @get_memory_info = 1 AND NOT EXISTS (SELECT * FROM sys.all_objects WHERE name = 'resource_governor_resource_pools')
-    BEGIN;		
+    BEGIN;
         RAISERROR('@get_memory_info is not available for SQL Server 2005.', 16, 1);
         RETURN;
     END;
@@ -1808,7 +1799,7 @@ BEGIN;
             @sql_n NVARCHAR(MAX),
             @core_session_join VARCHAR(MAX);
 
-		SET @core_session_join =
+        SET @core_session_join =
                 '@sessions AS sp
                 LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
                     s.session_id = sp.session_id
@@ -2815,6 +2806,7 @@ BEGIN;
                                         END + '
                                         x.host_process_id,
                                         x.group_id,
+                                        x.original_login_name,
                                         ' +
                                         CASE
                                             WHEN OBJECT_ID('master.dbo.fn_varbintohexstr') IS NOT NULL THEN
@@ -2894,8 +2886,8 @@ BEGIN;
                                     PATH(''resource_pool''),
                                     TYPE
                             )
-							WHERE
-								x.request_time IS NOT NULL
+                            WHERE
+                                x.request_time IS NOT NULL
                             FOR XML
                                 PATH(''memory_info''),
                                 TYPE
@@ -3159,19 +3151,33 @@ BEGIN;
                         sp.database_id,
                         sp.open_tran_count,
                         ' +
-                            CASE
-                                WHEN EXISTS
-                                (
-                                    SELECT
-                                        *
-                                    FROM sys.all_columns AS ac
-                                    WHERE
-                                        ac.object_id = OBJECT_ID('sys.dm_exec_sessions')
-                                        AND ac.name = 'group_id'
-                                )
-                                    THEN 's.group_id'
-                                ELSE 'CONVERT(INT, NULL) AS group_id'
-                            END + '
+                        CASE
+                            WHEN EXISTS
+                            (
+                                SELECT
+                                    *
+                                FROM sys.all_columns AS ac
+                                WHERE
+                                    ac.object_id = OBJECT_ID('sys.dm_exec_sessions')
+                                    AND ac.name = 'group_id'
+                            )
+                                THEN 's.group_id,'
+                            ELSE 'CONVERT(INT, NULL) AS group_id,'
+                        END + '
+                        ' +
+                        CASE
+                            WHEN EXISTS
+                            (
+                                SELECT
+                                    *
+                                FROM sys.all_columns AS ac
+                                WHERE
+                                    ac.object_id = OBJECT_ID('sys.dm_exec_sessions')
+                                    AND ac.name = 'original_login_name'
+                            )
+                                THEN 's.original_login_name'
+                            ELSE 'CONVERT(SYSNAME, NULL) AS original_login_name'
+                        END + '
                     FROM ' +
                     CASE
                         WHEN @get_memory_info = 1 THEN
@@ -5175,7 +5181,7 @@ BEGIN;
         @num_col_fmt NVARCHAR(MAX),
         @num_delta_col_fmt NVARCHAR(MAX);
 
-	SET @num_data_threshold = 919919919919919;
+    SET @num_data_threshold = 919919919919919;
     SET @num_col_fmt =
         CASE @format_output
             WHEN 1 THEN N'
@@ -5184,7 +5190,7 @@ BEGIN;
                 CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
             ELSE N''
         END + N'[col_name], ';
-	SET @num_delta_col_fmt =
+    SET @num_delta_col_fmt =
         N'
         CASE
             WHEN
