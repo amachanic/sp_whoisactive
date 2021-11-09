@@ -11,12 +11,12 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v11.35 (2020-10-04)
-(C) 2007-2020, Adam Machanic
+Who Is Active? v12.00-RC0 (2021-11-08)
+(C) 2007-2021, Adam Machanic
 
-Feedback: mailto:adam@dataeducation.com
-Updates: http://whoisactive.com
-Blog: http://dataeducation.com
+Feedback: https://github.com/amachanic/sp_whoisactive/issues
+Releases: https://github.com/amachanic/sp_whoisactive/releases
+Docs: http://whoisactive.com
 
 License:
     https://github.com/amachanic/sp_whoisactive/blob/master/LICENSE
