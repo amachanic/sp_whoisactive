@@ -11,7 +11,7 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v12.00-RC0 (2021-11-08)
+Who Is Active? v12.00-RC1 (2021-11-09)
 (C) 2007-2021, Adam Machanic
 
 Feedback: https://github.com/amachanic/sp_whoisactive/issues
@@ -4512,91 +4512,91 @@ BEGIN;
             WHILE @@FETCH_STATUS = 0
             BEGIN;
                 BEGIN TRY;
-                    SET @sql_n = CONVERT(NVARCHAR(MAX), '') +
-                        'UPDATE l ' +
-                        'SET ' +
-                            'object_name = ' +
-                                'REPLACE ' +
-                                '( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                        'o.name COLLATE Latin1_General_Bin2, ' +
-                                        'NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''), ' +
-                                        'NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''), ' +
-                                        'NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''), ' +
-                                    'NCHAR(0), ' +
-                                    N''''' ' +
-                                '), ' +
-                            'index_name = ' +
-                                'REPLACE ' +
-                                '( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                        'i.name COLLATE Latin1_General_Bin2, ' +
-                                        'NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''), ' +
-                                        'NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''), ' +
-                                        'NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''), ' +
-                                    'NCHAR(0), ' +
-                                    N''''' ' +
-                                '), ' +
-                            'schema_name = ' +
-                                'REPLACE ' +
-                                '( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                        's.name COLLATE Latin1_General_Bin2, ' +
-                                        'NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''), ' +
-                                        'NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''), ' +
-                                        'NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''), ' +
-                                    'NCHAR(0), ' +
-                                    N''''' ' +
-                                '), ' +
-                            'principal_name = ' +
-                                'REPLACE ' +
-                                '( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                        'dp.name COLLATE Latin1_General_Bin2, ' +
-                                        'NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''), ' +
-                                        'NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''), ' +
-                                        'NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''), ' +
-                                    'NCHAR(0), ' +
-                                    N''''' ' +
-                                ') ' +
-                        'FROM #locks AS l ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.allocation_units AS au ON ' +
-                            'au.allocation_unit_id = l.allocation_unit_id ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.partitions AS p ON ' +
-                            'p.hobt_id = ' +
-                                'COALESCE ' +
-                                '( ' +
-                                    'l.hobt_id, ' +
-                                    'CASE ' +
-                                        'WHEN au.type IN (1, 3) THEN au.container_id ' +
-                                        'ELSE NULL ' +
-                                    'END ' +
-                                ') ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.partitions AS p1 ON ' +
-                            'l.hobt_id IS NULL ' +
-                            'AND au.type = 2 ' +
-                            'AND p1.partition_id = au.container_id ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.objects AS o ON ' +
-                            'o.object_id = COALESCE(l.object_id, p.object_id, p1.object_id) ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.indexes AS i ON ' +
-                            'i.object_id = COALESCE(l.object_id, p.object_id, p1.object_id) ' +
-                            'AND i.index_id = COALESCE(l.index_id, p.index_id, p1.index_id) ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.schemas AS s ON ' +
-                            's.schema_id = COALESCE(l.schema_id, o.schema_id) ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.database_principals AS dp ON ' +
-                            'dp.principal_id = l.principal_id ' +
-                        'WHERE ' +
-                            'l.database_name = @database_name ' +
-                        'OPTION (KEEPFIXED PLAN); ';
-                   
+                    SET @sql_n = CONVERT(NVARCHAR(MAX), N'') + N'
+                        UPDATE l
+                        SET
+                            object_name =
+                                REPLACE
+                                (
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                        o.name COLLATE Latin1_General_Bin2,
+                                        NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''),
+                                        NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''),
+                                        NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''),
+                                    NCHAR(0),
+                                    N''''
+                                ),
+                            index_name =
+                                REPLACE
+                                (
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                        i.name COLLATE Latin1_General_Bin2,
+                                        NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''),
+                                        NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''),
+                                        NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''),
+                                    NCHAR(0),
+                                    N''''
+                                ),
+                            schema_name =
+                                REPLACE
+                                (
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                        s.name COLLATE Latin1_General_Bin2,
+                                        NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''),
+                                        NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''),
+                                        NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''),
+                                    NCHAR(0),
+                                    N''''
+                                ),
+                            principal_name =
+                                REPLACE
+                                (
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                        dp.name COLLATE Latin1_General_Bin2,
+                                        NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''),
+                                        NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''),
+                                        NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''),
+                                    NCHAR(0),
+                                    N''''
+                                )
+                        FROM #locks AS l
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.allocation_units AS au ON
+                            au.allocation_unit_id = l.allocation_unit_id
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.partitions AS p ON
+                            p.hobt_id =
+                                COALESCE
+                                (
+                                    l.hobt_id,
+                                    CASE
+                                        WHEN au.type IN (1, 3) THEN au.container_id
+                                        ELSE NULL
+                                    END
+                                )
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.partitions AS p1 ON
+                            l.hobt_id IS NULL
+                            AND au.type = 2
+                            AND p1.partition_id = au.container_id
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.objects AS o ON
+                            o.object_id = COALESCE(l.object_id, p.object_id, p1.object_id)
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.indexes AS i ON
+                            i.object_id = COALESCE(l.object_id, p.object_id, p1.object_id)
+                            AND i.index_id = COALESCE(l.index_id, p.index_id, p1.index_id)
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.schemas AS s ON
+                            s.schema_id = COALESCE(l.schema_id, o.schema_id)
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.database_principals AS dp ON
+                            dp.principal_id = l.principal_id
+                        WHERE
+                            l.database_name = @database_name
+                        OPTION (KEEPFIXED PLAN); ';
+
                     EXEC sp_executesql
                         @sql_n,
                         N'@database_name sysname',
@@ -4894,44 +4894,44 @@ BEGIN;
             BEGIN;
                 BEGIN TRY;
                     SET @sql_n =
-                        CONVERT(NVARCHAR(MAX), '') +
-                        'UPDATE b ' +
-                        'SET ' +
-                            'b.schema_name = ' +
-                                'REPLACE ' +
-                                '( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                        's.name COLLATE Latin1_General_Bin2, ' +
-                                        'NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''), ' +
-                                        'NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''), ' +
-                                        'NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''), ' +
-                                    'NCHAR(0), ' +
-                                    N''''' ' +
-                                '), ' +
-                            'b.object_name = ' +
-                                'REPLACE ' +
-                                '( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                    'REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE( ' +
-                                        'o.name COLLATE Latin1_General_Bin2, ' +
-                                        'NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''), ' +
-                                        'NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''), ' +
-                                        'NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''), ' +
-                                    'NCHAR(0), ' +
-                                    N''''' ' +
-                                ') ' +
-                        'FROM #blocked_requests AS b ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.partitions AS p ON ' +
-                            'p.hobt_id = b.hobt_id ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.objects AS o ON ' +
-                            'o.object_id = COALESCE(p.object_id, b.object_id) ' +
-                        'LEFT OUTER JOIN ' + QUOTENAME(@database_name) + '.sys.schemas AS s ON ' +
-                            's.schema_id = COALESCE(o.schema_id, b.schema_id) ' +
-                        'WHERE ' +
-                            'b.database_name = @database_name; ';
+                        CONVERT(NVARCHAR(MAX), N'') + N'
+                        UPDATE b
+                        SET
+                            b.schema_name =
+                                REPLACE
+                                (
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                        s.name COLLATE Latin1_General_Bin2,
+                                        NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''),
+                                        NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''),
+                                        NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''),
+                                    NCHAR(0),
+                                    N''''
+                                ),
+                            b.object_name =
+                                REPLACE
+                                (
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                    REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                                        o.name COLLATE Latin1_General_Bin2,
+                                        NCHAR(31),N''?''),NCHAR(30),N''?''),NCHAR(29),N''?''),NCHAR(28),N''?''),NCHAR(27),N''?''),NCHAR(26),N''?''),NCHAR(25),N''?''),NCHAR(24),N''?''),NCHAR(23),N''?''),NCHAR(22),N''?''),
+                                        NCHAR(21),N''?''),NCHAR(20),N''?''),NCHAR(19),N''?''),NCHAR(18),N''?''),NCHAR(17),N''?''),NCHAR(16),N''?''),NCHAR(15),N''?''),NCHAR(14),N''?''),NCHAR(12),N''?''),
+                                        NCHAR(11),N''?''),NCHAR(8),N''?''),NCHAR(7),N''?''),NCHAR(6),N''?''),NCHAR(5),N''?''),NCHAR(4),N''?''),NCHAR(3),N''?''),NCHAR(2),N''?''),NCHAR(1),N''?''),
+                                    NCHAR(0),
+                                    N''''
+                                )
+                        FROM #blocked_requests AS b
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.partitions AS p ON
+                            p.hobt_id = b.hobt_id
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.objects AS o ON
+                            o.object_id = COALESCE(p.object_id, b.object_id)
+                        LEFT OUTER JOIN ' + QUOTENAME(@database_name) + N'.sys.schemas AS s ON
+                            s.schema_id = COALESCE(o.schema_id, b.schema_id)
+                        WHERE
+                            b.database_name = @database_name; ';
                    
                     EXEC sp_executesql
                         @sql_n,
@@ -5172,320 +5172,323 @@ BEGIN;
 
     DECLARE
         @num_data_threshold MONEY = 919919919919919,
-        @num_col_fmt VARCHAR(500) =
+        @num_col_fmt NVARCHAR(MAX) =
             CASE @format_output
-                WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
-                WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
-                ELSE ''
-            END + '[col_name], ',
-        @num_delta_col_fmt VARCHAR(1000) =
-            'CASE ' +
-                'WHEN ' +
-                    'first_request_start_time = last_request_start_time ' +
-                    'AND num_events = 2 ' +
-                    'AND [col_name] >= 0 ' +
-                        'THEN ' +
-                        CASE @format_output
-                            WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
-                            WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
-                            ELSE '[col_name] '
-                        END +
-                'ELSE NULL ' +
-            'END AS [col_name], ';
-
-    SET @sql =
-        --Outer column list
-        CONVERT
-        (
-            VARCHAR(MAX),
+                WHEN 1 THEN N'
+                    CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
+                WHEN 2 THEN N'
+                    CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
+                ELSE N''
+            END + N'[col_name], ',
+        @num_delta_col_fmt NVARCHAR(MAX) =
+            N'
             CASE
                 WHEN
-                    @destination_table <> ''
-                    AND @return_schema = 0
-                        THEN 'INSERT ' + @destination_table + ' '
-                ELSE ''
-            END +
-            'SELECT ' +
-                @output_column_list + ' ' +
-            CASE @return_schema
-                WHEN 1 THEN 'INTO #session_schema '
-                ELSE ''
-            END
+                    first_request_start_time = last_request_start_time
+                    AND num_events = 2
+                    AND [col_name] >= 0
+                        THEN ' +
+                        CASE @format_output
+                            WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
+                            WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
+                            ELSE N'[col_name] '
+                        END + N'
+                ELSE NULL
+            END AS [col_name], ';
+
+    SET @sql_n = CONVERT(NVARCHAR(MAX), N'') +
+        --Outer column list
+        CASE
+            WHEN
+                @destination_table <> ''
+                AND @return_schema = 0
+                    THEN N'INSERT ' + @destination_table + ' '
+            ELSE N''
+        END +
+        N'SELECT ' +
+            @output_column_list + N' ' +
+        CASE @return_schema
+            WHEN 1 THEN N'INTO #session_schema '
+            ELSE N''
+        END
         --End outer column list
-        ) +
+        +
         --Inner column list
-        CONVERT
+        N'
+        FROM
         (
-            VARCHAR(MAX),
-            'FROM ' +
-            '( ' +
-                'SELECT ' +
-                    'session_id, ' +
-                    --[dd hh:mm:ss.mss]
+            SELECT
+                session_id, ' +
+                --[dd hh:mm:ss.mss]
+                CASE
+                    WHEN @format_output IN (1, 2) THEN
+                        N'
+                        CASE
+                            WHEN elapsed_time < 0 THEN
+                                RIGHT
+                                (
+                                    REPLICATE(''0'', max_elapsed_length) + CONVERT(VARCHAR, (-1 * elapsed_time) / 86400),
+                                    max_elapsed_length
+                                ) +
+                                    RIGHT
+                                    (
+                                        CONVERT(VARCHAR, DATEADD(second, (-1 * elapsed_time), 0), 120),
+                                        9
+                                    ) +
+                                    ''.000''
+                            ELSE
+                                RIGHT
+                                (
+                                    REPLICATE(''0'', max_elapsed_length) + CONVERT(VARCHAR, elapsed_time / 86400000),
+                                    max_elapsed_length
+                                ) +
+                                    RIGHT
+                                    (
+                                        CONVERT(VARCHAR, DATEADD(second, elapsed_time / 1000, 0), 120),
+                                        9
+                                    ) +
+                                    ''.'' +
+                                    RIGHT(''000'' + CONVERT(VARCHAR, elapsed_time % 1000), 3)
+                        END AS [dd hh:mm:ss.mss], '
+                    ELSE
+                        N''
+                END +
+                --[dd hh:mm:ss.mss (avg)] / avg_elapsed_time
+                CASE
+                    WHEN  @format_output IN (1, 2) THEN
+                        N'
+                        RIGHT
+                        (
+                            ''00'' + CONVERT(VARCHAR, avg_elapsed_time / 86400000),
+                            2
+                        ) +
+                            RIGHT
+                            (
+                                CONVERT(VARCHAR, DATEADD(second, avg_elapsed_time / 1000, 0), 120),
+                                9
+                            ) +
+                            ''.'' +
+                            RIGHT(''000'' + CONVERT(VARCHAR, avg_elapsed_time % 1000), 3) AS [dd hh:mm:ss.mss (avg)], '
+                    ELSE
+                        N'avg_elapsed_time, '
+                END +
+                REPLACE(@num_col_fmt, N'[col_name]', N'physical_io') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'reads') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'physical_reads') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'writes') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'tempdb_allocations') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'tempdb_current') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'CPU') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'context_switches') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'used_memory') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'max_used_memory') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'requested_memory') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'granted_memory') +
+                CASE
+                    WHEN @output_column_list LIKE '%|_delta|]%' ESCAPE '|' THEN
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'physical_io_delta') +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'reads_delta') +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'physical_reads_delta') +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'writes_delta') +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'tempdb_allocations_delta') +
+                        --this is the only one that can (legitimately) go negative
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'tempdb_current_delta') +
+                        --CPU_delta
+                        --leaving this one hardcoded, as there is a bit of different interaction here
+                        N'
+                        CASE
+                            WHEN
+                                first_request_start_time = last_request_start_time
+                                AND num_events = 2
+                                    THEN
+                                        CASE
+                                            WHEN
+                                                thread_CPU_delta > CPU_delta
+                                                AND thread_CPU_delta > 0
+                                                    THEN ' +
+                                                        CASE @format_output
+                                                            WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, thread_CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
+                                                            WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
+                                                            ELSE N'thread_CPU_delta '
+                                                        END + N'
+                                            WHEN CPU_delta >= 0 THEN ' +
+                                                CASE @format_output
+                                                    WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
+                                                    WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
+                                                    ELSE N'CPU_delta '
+                                                END + N'
+                                            ELSE NULL
+                                        END
+                            ELSE
+                                NULL
+                        END AS CPU_delta, ' +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'context_switches_delta') +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'used_memory_delta') +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'max_used_memory_delta')
+                    ELSE N''
+                END + N'
+                ' +
+                REPLACE(@num_col_fmt, N'[col_name]', N'tasks') + N'
+                status,
+                wait_info,
+                locks,
+                tran_start_time,
+                LEFT(tran_log_writes, LEN(tran_log_writes) - 1) AS tran_log_writes,
+                implicit_tran, ' +
+                REPLACE(@num_col_fmt, '[col_name]', 'open_tran_count') + N'
+                ' +
+                --sql_command
+                CASE @format_output
+                    WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
+                    ELSE N''
+                END + N'sql_command,
+                ' +
+                --sql_text
+                CASE @format_output
+                    WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
+                    ELSE N''
+                END + N'sql_text,
+                query_plan,
+                blocking_session_id, ' +
+                REPLACE(@num_col_fmt, N'[col_name]', N'blocked_session_count') +
+                REPLACE(@num_col_fmt, N'[col_name]', N'percent_complete') + N'
+                host_name,
+                login_name,
+                database_name,
+                program_name,
+                additional_info,
+                memory_info,
+                start_time,
+                login_time,
+                CASE
+                    WHEN status = N''sleeping'' THEN NULL
+                    ELSE request_id
+                END AS request_id,
+                GETDATE() AS collection_time '
+        --End inner column list
+        +
+        --Derived table and INSERT specification
+            N'
+            FROM
+            (
+                SELECT TOP(2147483647)
+                    *,
                     CASE
-                        WHEN @format_output IN (1, 2) THEN
-                            'CASE ' +
-                                'WHEN elapsed_time < 0 THEN ' +
-                                    'RIGHT ' +
-                                    '( ' +
-                                        'REPLICATE(''0'', max_elapsed_length) + CONVERT(VARCHAR, (-1 * elapsed_time) / 86400), ' +
-                                        'max_elapsed_length ' +
-                                    ') + ' +
-                                        'RIGHT ' +
-                                        '( ' +
-                                            'CONVERT(VARCHAR, DATEADD(second, (-1 * elapsed_time), 0), 120), ' +
-                                            '9 ' +
-                                        ') + ' +
-                                        '''.000'' ' +
-                                'ELSE ' +
-                                    'RIGHT ' +
-                                    '( ' +
-                                        'REPLICATE(''0'', max_elapsed_length) + CONVERT(VARCHAR, elapsed_time / 86400000), ' +
-                                        'max_elapsed_length ' +
-                                    ') + ' +
-                                        'RIGHT ' +
-                                        '( ' +
-                                            'CONVERT(VARCHAR, DATEADD(second, elapsed_time / 1000, 0), 120), ' +
-                                            '9 ' +
-                                        ') + ' +
-                                        '''.'' + ' +
-                                        'RIGHT(''000'' + CONVERT(VARCHAR, elapsed_time % 1000), 3) ' +
-                            'END AS [dd hh:mm:ss.mss], '
-                        ELSE
-                            ''
-                    END +
-                    --[dd hh:mm:ss.mss (avg)] / avg_elapsed_time
-                    CASE
-                        WHEN  @format_output IN (1, 2) THEN
-                            'RIGHT ' +
-                            '( ' +
-                                '''00'' + CONVERT(VARCHAR, avg_elapsed_time / 86400000), ' +
-                                '2 ' +
-                            ') + ' +
-                                'RIGHT ' +
-                                '( ' +
-                                    'CONVERT(VARCHAR, DATEADD(second, avg_elapsed_time / 1000, 0), 120), ' +
-                                    '9 ' +
-                                ') + ' +
-                                '''.'' + ' +
-                                'RIGHT(''000'' + CONVERT(VARCHAR, avg_elapsed_time % 1000), 3) AS [dd hh:mm:ss.mss (avg)], '
-                        ELSE
-                            'avg_elapsed_time, '
-                    END +
-                    REPLACE(@num_col_fmt, '[col_name]', 'physical_io') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'reads') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'physical_reads') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'writes') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'tempdb_allocations') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'tempdb_current') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'CPU') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'context_switches') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'used_memory') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'max_used_memory') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'requested_memory') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'granted_memory') +
+                        MAX
+                        (
+                            LEN
+                            (
+                                CONVERT
+                                (
+                                    VARCHAR,
+                                    CASE
+                                        WHEN elapsed_time < 0 THEN
+                                            (-1 * elapsed_time) / 86400
+                                        ELSE
+                                            elapsed_time / 86400000
+                                    END
+                                )
+                            )
+                        ) OVER ()
+                            WHEN 1 THEN 2
+                            ELSE
+                                MAX
+                                (
+                                    LEN
+                                    (
+                                        CONVERT
+                                        (
+                                            VARCHAR,
+                                            CASE
+                                                WHEN elapsed_time < 0 THEN
+                                                    (-1 * elapsed_time) / 86400
+                                                ELSE
+                                                    elapsed_time / 86400000
+                                            END
+                                        )
+                                    )
+                                ) OVER ()
+                    END AS max_elapsed_length, ' +
                     CASE
                         WHEN @output_column_list LIKE '%|_delta|]%' ESCAPE '|' THEN
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'physical_io_delta') +
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'reads_delta') +
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'physical_reads_delta') +
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'writes_delta') +
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'tempdb_allocations_delta') +
-                            --this is the only one that can (legitimately) go negative
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'tempdb_current_delta') +
-                            --CPU_delta
-                            --leaving this one hardcoded, as there is a bit of different interaction here
-                            'CASE ' +
-                                'WHEN ' +
-                                    'first_request_start_time = last_request_start_time ' +
-                                    'AND num_events = 2 ' +
-                                        'THEN ' +
-                                            'CASE ' +
-                                                'WHEN ' +
-                                                    'thread_CPU_delta > CPU_delta ' +
-                                                    'AND thread_CPU_delta > 0 ' +
-                                                        'THEN ' +
-                                                            CASE @format_output
-                                                                WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, thread_CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
-                                                                WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
-                                                                ELSE 'thread_CPU_delta '
-                                                            END +
-                                                'WHEN CPU_delta >= 0 THEN ' +
-                                                    CASE @format_output
-                                                        WHEN 1 THEN 'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
-                                                        WHEN 2 THEN 'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
-                                                        ELSE 'CPU_delta '
-                                                    END +
-                                                'ELSE NULL ' +
-                                            'END ' +
-                                'ELSE ' +
-                                    'NULL ' +
-                            'END AS CPU_delta, ' +
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'context_switches_delta') +
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'used_memory_delta') +
-                            REPLACE(@num_delta_col_fmt, '[col_name]', 'max_used_memory_delta')
-                        ELSE ''
-                    END +
-                    REPLACE(@num_col_fmt, '[col_name]', 'tasks') +
-                    'status, ' +
-                    'wait_info, ' +
-                    'locks, ' +
-                    'tran_start_time, ' +
-                    'LEFT(tran_log_writes, LEN(tran_log_writes) - 1) AS tran_log_writes, ' +
-                    'implicit_tran, ' +
-                    REPLACE(@num_col_fmt, '[col_name]', 'open_tran_count') +
-                    --sql_command
-                    CASE @format_output
-                        WHEN 0 THEN 'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
-                        ELSE ''
-                    END + 'sql_command, ' +
-                    --sql_text
-                    CASE @format_output
-                        WHEN 0 THEN 'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
-                        ELSE ''
-                    END + 'sql_text, ' +
-                    'query_plan, ' +
-                    'blocking_session_id, ' +
-                    REPLACE(@num_col_fmt, '[col_name]', 'blocked_session_count') +
-                    REPLACE(@num_col_fmt, '[col_name]', 'percent_complete') +
-                    'host_name, ' +
-                    'login_name, ' +
-                    'database_name, ' +
-                    'program_name, ' +
-                    'additional_info, ' +
-                    'memory_info, ' +
-                    'start_time, ' +
-                    'login_time, ' +
-                    'CASE ' +
-                        'WHEN status = N''sleeping'' THEN NULL ' +
-                        'ELSE request_id ' +
-                    'END AS request_id, ' +
-                    'GETDATE() AS collection_time '
-        --End inner column list
-        ) +
-        --Derived table and INSERT specification
-        CONVERT
-        (
-            VARCHAR(MAX),
-                'FROM ' +
-                '( ' +
-                    'SELECT TOP(2147483647) ' +
-                        '*, ' +
-                        'CASE ' +
-                            'MAX ' +
-                            '( ' +
-                                'LEN ' +
-                                '( ' +
-                                    'CONVERT ' +
-                                    '( ' +
-                                        'VARCHAR, ' +
-                                        'CASE ' +
-                                            'WHEN elapsed_time < 0 THEN ' +
-                                                '(-1 * elapsed_time) / 86400 ' +
-                                            'ELSE ' +
-                                                'elapsed_time / 86400000 ' +
-                                        'END ' +
-                                    ') ' +
-                                ') ' +
-                            ') OVER () ' +
-                                'WHEN 1 THEN 2 ' +
-                                'ELSE ' +
-                                    'MAX ' +
-                                    '( ' +
-                                        'LEN ' +
-                                        '( ' +
-                                            'CONVERT ' +
-                                            '( ' +
-                                                'VARCHAR, ' +
-                                                'CASE ' +
-                                                    'WHEN elapsed_time < 0 THEN ' +
-                                                        '(-1 * elapsed_time) / 86400 ' +
-                                                    'ELSE ' +
-                                                        'elapsed_time / 86400000 ' +
-                                                'END ' +
-                                            ') ' +
-                                        ') ' +
-                                    ') OVER () ' +
-                        'END AS max_elapsed_length, ' +
-                        CASE
-                            WHEN @output_column_list LIKE '%|_delta|]%' ESCAPE '|' THEN
-                                'MAX(physical_io * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(physical_io * recursion) OVER (PARTITION BY session_id, request_id) AS physical_io_delta, ' +
-                                'MAX(reads * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(reads * recursion) OVER (PARTITION BY session_id, request_id) AS reads_delta, ' +
-                                'MAX(physical_reads * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(physical_reads * recursion) OVER (PARTITION BY session_id, request_id) AS physical_reads_delta, ' +
-                                'MAX(writes * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(writes * recursion) OVER (PARTITION BY session_id, request_id) AS writes_delta, ' +
-                                'MAX(tempdb_allocations * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(tempdb_allocations * recursion) OVER (PARTITION BY session_id, request_id) AS tempdb_allocations_delta, ' +
-                                'MAX(tempdb_current * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(tempdb_current * recursion) OVER (PARTITION BY session_id, request_id) AS tempdb_current_delta, ' +
-                                'MAX(CPU * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(CPU * recursion) OVER (PARTITION BY session_id, request_id) AS CPU_delta, ' +
-                                'MAX(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) AS thread_CPU_delta, ' +
-                                'MAX(context_switches * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(context_switches * recursion) OVER (PARTITION BY session_id, request_id) AS context_switches_delta, ' +
-                                'MAX(used_memory * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(used_memory * recursion) OVER (PARTITION BY session_id, request_id) AS used_memory_delta, ' +
-                                'MAX(max_used_memory * recursion) OVER (PARTITION BY session_id, request_id) + ' +
-                                    'MIN(max_used_memory * recursion) OVER (PARTITION BY session_id, request_id) AS max_used_memory_delta, ' +
-                                'MIN(last_request_start_time) OVER (PARTITION BY session_id, request_id) AS first_request_start_time, '
-                            ELSE ''
-                        END +
-                        'COUNT(*) OVER (PARTITION BY session_id, request_id) AS num_events ' +
-                    'FROM #sessions AS s1 ' +
-                    CASE
-                        WHEN @sort_order = '' THEN ''
-                        ELSE
-                            'ORDER BY ' +
-                                @sort_order
-                    END +
-                ') AS s ' +
-                'WHERE ' +
-                    's.recursion = 1 ' +
-            ') x ' +
-            'OPTION (KEEPFIXED PLAN); ' +
-            '' +
-            CASE @return_schema
-                WHEN 1 THEN
-                    'SET @schema = ' +
-                        '''CREATE TABLE <table_name> ( '' + ' +
-                            'STUFF ' +
-                            '( ' +
-                                '( ' +
-                                    'SELECT ' +
-                                        ''','' + ' +
-                                        'QUOTENAME(COLUMN_NAME) + '' '' + ' +
-                                        'DATA_TYPE + ' +
-                                        'CASE ' +
-                                            'WHEN DATA_TYPE LIKE ''%char'' THEN ''('' + COALESCE(NULLIF(CONVERT(VARCHAR, CHARACTER_MAXIMUM_LENGTH), ''-1''), ''max'') + '') '' ' +
-                                            'ELSE '' '' ' +
-                                        'END + ' +
-                                        'CASE IS_NULLABLE ' +
-                                            'WHEN ''NO'' THEN ''NOT '' ' +
-                                            'ELSE '''' ' +
-                                        'END + ''NULL'' AS [text()] ' +
-                                    'FROM tempdb.INFORMATION_SCHEMA.COLUMNS ' +
-                                    'WHERE ' +
-                                        'TABLE_NAME = (SELECT name FROM tempdb.sys.objects WHERE object_id = OBJECT_ID(''tempdb..#session_schema'')) ' +
-                                        'ORDER BY ' +
-                                            'ORDINAL_POSITION ' +
-                                    'FOR XML ' +
-                                        'PATH('''') ' +
-                                '), + ' +
-                                '1, ' +
-                                '1, ' +
-                                ''''' ' +
-                            ') + ' +
-                        ''')''; '
-                ELSE ''
-            END
+                            N'
+                            MAX(physical_io * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(physical_io * recursion) OVER (PARTITION BY session_id, request_id) AS physical_io_delta,
+                            MAX(reads * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(reads * recursion) OVER (PARTITION BY session_id, request_id) AS reads_delta,
+                            MAX(physical_reads * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(physical_reads * recursion) OVER (PARTITION BY session_id, request_id) AS physical_reads_delta,
+                            MAX(writes * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(writes * recursion) OVER (PARTITION BY session_id, request_id) AS writes_delta,
+                            MAX(tempdb_allocations * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(tempdb_allocations * recursion) OVER (PARTITION BY session_id, request_id) AS tempdb_allocations_delta,
+                            MAX(tempdb_current * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(tempdb_current * recursion) OVER (PARTITION BY session_id, request_id) AS tempdb_current_delta,
+                            MAX(CPU * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(CPU * recursion) OVER (PARTITION BY session_id, request_id) AS CPU_delta,
+                            MAX(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) AS thread_CPU_delta,
+                            MAX(context_switches * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(context_switches * recursion) OVER (PARTITION BY session_id, request_id) AS context_switches_delta,
+                            MAX(used_memory * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(used_memory * recursion) OVER (PARTITION BY session_id, request_id) AS used_memory_delta,
+                            MAX(max_used_memory * recursion) OVER (PARTITION BY session_id, request_id) +
+                                MIN(max_used_memory * recursion) OVER (PARTITION BY session_id, request_id) AS max_used_memory_delta,
+                            MIN(last_request_start_time) OVER (PARTITION BY session_id, request_id) AS first_request_start_time, '
+                        ELSE N''
+                    END + N'
+                    COUNT(*) OVER (PARTITION BY session_id, request_id) AS num_events
+                FROM #sessions AS s1 ' +
+                CASE
+                    WHEN @sort_order = '' THEN N''
+                    ELSE
+                        N'
+                        ORDER BY ' +
+                            CONVERT(NVARCHAR(MAX), @sort_order)
+                END +
+            N'
+            ) AS s
+            WHERE
+                s.recursion = 1
+        ) x
+        OPTION (KEEPFIXED PLAN);
+        ' +
+        CASE @return_schema
+            WHEN 1 THEN
+                N'
+                SET @schema =
+                    ''CREATE TABLE <table_name> ( '' +
+                        STUFF
+                        (
+                            (
+                                SELECT
+                                    '','' +
+                                    QUOTENAME(COLUMN_NAME) + '' '' +
+                                    DATA_TYPE +
+                                    CASE
+                                        WHEN DATA_TYPE LIKE ''%char'' THEN ''('' + COALESCE(NULLIF(CONVERT(VARCHAR, CHARACTER_MAXIMUM_LENGTH), ''-1''), ''max'') + '') ''
+                                        ELSE '' ''
+                                    END +
+                                    CASE IS_NULLABLE
+                                        WHEN ''NO'' THEN ''NOT ''
+                                        ELSE ''''
+                                    END + ''NULL'' AS [text()]
+                                FROM tempdb.INFORMATION_SCHEMA.COLUMNS
+                                WHERE
+                                    TABLE_NAME = (SELECT name FROM tempdb.sys.objects WHERE object_id = OBJECT_ID(''tempdb..#session_schema''))
+                                    ORDER BY
+                                        ORDINAL_POSITION
+                                FOR XML
+                                    PATH('''')
+                            ), +
+                            1,
+                            1,
+                            ''''
+                        ) +
+                    '');''; '
+            ELSE N''
+        END;
         --End derived table and INSERT specification
-        );
-
-    SET @sql_n = CONVERT(NVARCHAR(MAX), @sql);
 
     EXEC sp_executesql
         @sql_n,
