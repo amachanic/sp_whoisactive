@@ -11,7 +11,7 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v12.00-RC1 (2021-11-09)
+Who Is Active? v12.00-RC2 (2021-11-09)
 (C) 2007-2021, Adam Machanic
 
 Feedback: https://github.com/amachanic/sp_whoisactive/issues
@@ -420,10 +420,6 @@ Formatted/Non:    [memory_info] [xml] NULL
 */
 AS
 BEGIN;
-
-    DECLARE @sql_version INT
-    SET @sql_version = CONVERT(INT, LEFT(REPLACE(CAST(SERVERPROPERTY('ProductVersion') AS CHAR(15)), '.', ''), 7))
-
     SET NOCOUNT ON;
     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
     SET QUOTED_IDENTIFIER ON;
@@ -509,10 +505,10 @@ BEGIN;
         RAISERROR('Valid values for @format_output are: 0, 1, or 2', 16, 1);
         RETURN;
     END;
-   
-    IF @get_memory_info = 1 AND @sql_version < 1001600
-    BEGIN;
-        RAISERROR('Advanced memory options are not available for SQL Server 2005.', 16, 1);
+
+    IF @get_memory_info = 1 AND NOT EXISTS (SELECT * FROM sys.all_objects WHERE name = 'resource_governor_resource_pools')
+    BEGIN;		
+        RAISERROR('@get_memory_info is not available for SQL Server 2005.', 16, 1);
         RETURN;
     END;
 
@@ -1810,7 +1806,9 @@ BEGIN;
         DECLARE
             @sql VARCHAR(MAX),
             @sql_n NVARCHAR(MAX),
-            @core_session_join VARCHAR(MAX) =
+            @core_session_join VARCHAR(MAX);
+
+		SET @core_session_join =
                 '@sessions AS sp
                 LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
                     s.session_id = sp.session_id
@@ -2896,6 +2894,8 @@ BEGIN;
                                     PATH(''resource_pool''),
                                     TYPE
                             )
+							WHERE
+								x.request_time IS NOT NULL
                             FOR XML
                                 PATH(''memory_info''),
                                 TYPE
@@ -5171,30 +5171,34 @@ BEGIN;
     END;
 
     DECLARE
-        @num_data_threshold MONEY = 919919919919919,
-        @num_col_fmt NVARCHAR(MAX) =
-            CASE @format_output
-                WHEN 1 THEN N'
-                    CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
-                WHEN 2 THEN N'
-                    CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
-                ELSE N''
-            END + N'[col_name], ',
-        @num_delta_col_fmt NVARCHAR(MAX) =
-            N'
-            CASE
-                WHEN
-                    first_request_start_time = last_request_start_time
-                    AND num_events = 2
-                    AND [col_name] >= 0
-                        THEN ' +
-                        CASE @format_output
-                            WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
-                            WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
-                            ELSE N'[col_name] '
-                        END + N'
-                ELSE NULL
-            END AS [col_name], ';
+        @num_data_threshold MONEY,
+        @num_col_fmt NVARCHAR(MAX),
+        @num_delta_col_fmt NVARCHAR(MAX);
+
+	SET @num_data_threshold = 919919919919919;
+    SET @num_col_fmt =
+        CASE @format_output
+            WHEN 1 THEN N'
+                CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
+            WHEN 2 THEN N'
+                CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
+            ELSE N''
+        END + N'[col_name], ';
+	SET @num_delta_col_fmt =
+        N'
+        CASE
+            WHEN
+                first_request_start_time = last_request_start_time
+                AND num_events = 2
+                AND [col_name] >= 0
+                    THEN ' +
+                    CASE @format_output
+                        WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
+                        WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
+                        ELSE N'[col_name] '
+                    END + N'
+            ELSE NULL
+        END AS [col_name], ';
 
     SET @sql_n = CONVERT(NVARCHAR(MAX), N'') +
         --Outer column list
