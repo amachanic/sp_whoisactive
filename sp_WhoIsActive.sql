@@ -3164,20 +3164,7 @@ BEGIN;
                                 THEN 's.group_id,'
                             ELSE 'CONVERT(INT, NULL) AS group_id,'
                         END + '
-                        ' +
-                        CASE
-                            WHEN EXISTS
-                            (
-                                SELECT
-                                    *
-                                FROM sys.all_columns AS ac
-                                WHERE
-                                    ac.object_id = OBJECT_ID('sys.dm_exec_sessions')
-                                    AND ac.name = 'original_login_name'
-                            )
-                                THEN 's.original_login_name'
-                            ELSE 'CONVERT(SYSNAME, NULL) AS original_login_name'
-                        END + '
+                        s.original_login_name
                     FROM ' +
                     CASE
                         WHEN @get_memory_info = 1 THEN
