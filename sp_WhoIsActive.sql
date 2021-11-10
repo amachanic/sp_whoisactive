@@ -11,7 +11,7 @@ IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 's
 GO
 
 /*********************************************************************************************
-Who Is Active? v12.00-RC3 (2021-11-09)
+Who Is Active? v12.00 (2021-11-10)
 (C) 2007-2021, Adam Machanic
 
 Feedback: https://github.com/amachanic/sp_whoisactive/issues
