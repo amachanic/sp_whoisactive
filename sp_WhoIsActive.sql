@@ -1804,11 +1804,11 @@ BEGIN;
                 LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
                     s.session_id = sp.session_id
                     AND s.login_time = sp.login_time
-				LEFT JOIN (SELECT substring((cast(sj.job_id as varchar(36))), 7, 2) + substring((cast(sj.job_id as varchar(36))), 5, 2) + substring((
-								cast(sj.job_id as varchar(36))), 3, 2) + substring((cast(sj.job_id as varchar(36))), 1, 2) + substring((cast(sj.job_id as
-								varchar(36))), 12, 2) + substring((cast(sj.job_id as varchar(36))), 10, 2) + substring((cast(sj.job_id as varchar(36))),
-								17, 2) + substring((cast(sj.job_id as varchar(36))), 15, 2) + substring((cast(sj.job_id as varchar(36))), 20, 4) +
-								substring((cast(sj.job_id as varchar(36))), 25, 12) job_id,name FROM msdb.dbo.sysjobs sj) sj ON SUBSTRING((cast(sp.program_name as varchar(75))), 32, 32) = sj.job_id
+		LEFT JOIN (SELECT substring((cast(sj.job_id as varchar(36))), 7, 2) + substring((cast(sj.job_id as varchar(36))), 5, 2) + substring((
+					cast(sj.job_id as varchar(36))), 3, 2) + substring((cast(sj.job_id as varchar(36))), 1, 2) + substring((cast(sj.job_id as
+					varchar(36))), 12, 2) + substring((cast(sj.job_id as varchar(36))), 10, 2) + substring((cast(sj.job_id as varchar(36))),
+					17, 2) + substring((cast(sj.job_id as varchar(36))), 15, 2) + substring((cast(sj.job_id as varchar(36))), 20, 4) +
+					substring((cast(sj.job_id as varchar(36))), 25, 12) job_id,name FROM msdb.dbo.sysjobs sj) sj ON SUBSTRING((cast(sp.program_name as varchar(75))), 32, 32) = sj.job_id
                 LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
                     sp.status <> ''sleeping''
                     AND r.session_id = sp.session_id
@@ -3098,7 +3098,7 @@ BEGIN;
                         NULLIF(r.percent_complete, 0) AS percent_complete,
                         sp.host_name,
                         sp.login_name,
-						CASE WHEN sp.program_name LIKE ''SQLAgent%'' THEN ''JobName [''+sj.name+''] ''+sp.program_name ELSE sp.program_name END program_name,
+			CASE WHEN sp.program_name LIKE ''SQLAgent%'' THEN ''JobName [''+sj.name+''] ''+sp.program_name ELSE sp.program_name END program_name,
                         s.host_process_id,
                         COALESCE(r.text_size, s.text_size) AS text_size,
                         COALESCE(r.language, s.language) AS language,
