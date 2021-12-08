@@ -29,9 +29,9 @@ ALTER PROC dbo.sp_WhoIsActive
     --Valid filter types are: session, program, database, login, and host
     --Session is a session ID, and either 0 or '' can be used to indicate "all" sessions
     --All other filter types support % or _ as wildcards
-    @filter sysname = '',
+    @filter sysname = N'',
     @filter_type VARCHAR(10) = 'session',
-    @not_filter sysname = '',
+    @not_filter sysname = N'',
     @not_filter_type VARCHAR(10) = 'session',
 
     --Retrieve data about the calling session?
@@ -3568,7 +3568,8 @@ BEGIN;
                                                                             LEFT(wt.resource_description, CHARINDEX(N'' '', wt.resource_description) - 1) COLLATE Latin1_General_Bin2 AS lock_type
                                                                     ) AS x
                                                                     FOR XML
-                                                                        PATH('''')
+                                                                        PATH(''''),
+                                                                        TYPE
                                                                 )
                                                             ELSE NULL
                                                         END AS block_info,
@@ -5199,7 +5200,7 @@ BEGIN;
             WHEN
                 @destination_table <> ''
                 AND @return_schema = 0
-                    THEN N'INSERT ' + @destination_table + ' '
+                    THEN N'INSERT ' + @destination_table + N' '
             ELSE N''
         END +
         N'SELECT ' +
