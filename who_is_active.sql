@@ -95,6 +95,11 @@ ALTER PROC dbo.sp_WhoIsActive
     --Not available for SQL Server 2005.
     @get_memory_info BIT = 0,
 
+    --Get a column whether the connection is encrypted or not
+    --
+    --Not available for SQL Server 2005.
+    @get_encrypt_info BIT = 0,
+
     --Walk the blocking chain and count the number of
     --total SPIDs blocked all the way down by a given session
     --Also enables task_info Level 1, if @get_task_info is set to 0
@@ -385,6 +390,7 @@ Formatted/Non:    [program_name] [sysname] NULL
     Shows the reported program/application name
 
 Formatted/Non:    [encrypt_option] [nvarchar](40) NULL
+    (Requires @get_encrypt_info = 1)
     Shows whether the connection is encrypted.
 
 Formatted/Non:    [additional_info] [xml] NULL
@@ -1067,6 +1073,8 @@ BEGIN;
             SELECT '[program_name]', 44
             UNION ALL
             SELECT '[encrypt_option]', 45
+            WHERE
+                @get_encrypt_info = 1
             UNION ALL
             SELECT '[additional_info]', 46
             WHERE
@@ -2118,8 +2126,14 @@ BEGIN;
                                             )
                                     END COLLATE SQL_Latin1_General_CP1_CI_AS
                                 ) AS program_name,
-                                MAX(c.encrypt_option) as encrypt_option,
-                                MAX(sp2.dbid) AS database_id,
+                                ' +
+                                CASE
+                                    WHEN @get_encrypt_info = 1 THEN
+                                        'MAX(c.encrypt_option) AS encrypt_option,'
+                                    ELSE
+                                        '''FALSE'' AS encrypt_option,'
+                                END +
+                                'MAX(sp2.dbid) AS database_id,
                                 MAX(sp2.memusage) AS memory_usage,
                                 MAX(sp2.open_tran) AS open_tran_count,
                                 RTRIM(sp2.lastwaittype) AS wait_type,
@@ -2244,8 +2258,13 @@ BEGIN;
                                             'AND sp0.program_name LIKE @filter
                                             '
                                         WHEN 'encrypted' THEN
-                                            'AND sp0.encrypt_option LIKE @filter
-                                            '
+                                            CASE
+                                                WHEN @get_encrypt_info = 1 THEN
+                                                    'AND sp0.encrypt_option LIKE @filter
+                                                    '
+                                                ELSE
+                                                    ''
+                                            END
                                         WHEN 'login' THEN
                                             'AND sp0.login_name LIKE @filter
                                             '
@@ -2277,8 +2296,13 @@ BEGIN;
                                             'AND sp0.program_name NOT LIKE @not_filter
                                             '
                                         WHEN 'encrypted' THEN
-                                            'AND sp0.encrypt_option NOT LIKE @not_filter
-                                            '
+                                            CASE
+                                                WHEN @get_encrypt_info = 1 THEN
+                                                    'AND sp0.encrypt_option NOT LIKE @not_filter
+                                                    '
+                                                ELSE
+                                                    ''
+                                            END
                                         WHEN 'login' THEN
                                             'AND sp0.login_name NOT LIKE @not_filter
                                             '
@@ -2737,7 +2761,12 @@ BEGIN;
                         @output_column_list LIKE '%|[encrypt_option|]%' ESCAPE '|'
                         AND @recursion = 1
                             THEN
-                                'x.encrypt_option '
+                                CASE 
+                                    WHEN @get_encrypt_info = 1 THEN
+                                        'x.encrypt_option '
+                                    ELSE
+                                        ''''' '
+                                END
                     ELSE
                         ''''' '
                 END +
