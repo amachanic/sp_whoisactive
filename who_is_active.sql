@@ -2118,7 +2118,7 @@ BEGIN;
                                             )
                                     END COLLATE SQL_Latin1_General_CP1_CI_AS
                                 ) AS program_name,
-                                MAX(sp2.encrypt_option) as encrypt_option,
+                                MAX(c.encrypt_option) as encrypt_option,
                                 MAX(sp2.dbid) AS database_id,
                                 MAX(sp2.memusage) AS memory_usage,
                                 MAX(sp2.open_tran) AS open_tran_count,
@@ -2182,6 +2182,8 @@ BEGIN;
                                     blk.session_id = 0
                                     AND @blocker = 0
                                 )
+                            LEFT OUTER LOOP JOIN sys.dm_exec_connections AS c ON
+                                c.session_id = sp2.spid
                             CROSS APPLY
                             (
                                 SELECT
