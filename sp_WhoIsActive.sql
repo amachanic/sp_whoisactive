@@ -1478,7 +1478,7 @@ BEGIN;
                                         END
                                     WHEN 'encrypted' THEN
                                         CASE
-                                            WHEN c.encrypt_option LIKE @filter THEN 1
+                                            WHEN (@get_encrypt_info = 1) AND (c.encrypt_option LIKE @filter) THEN 1
                                             ELSE 0
                                         END
                                     WHEN 'login' THEN
@@ -1517,7 +1517,7 @@ BEGIN;
                                         END
                                     WHEN 'encrypted' THEN
                                         CASE
-                                            WHEN c.encrypt_option LIKE @not_filter THEN 1
+                                            WHEN (@get_encrypt_info = 1) AND (c.encrypt_option LIKE @not_filter) THEN 1
                                             ELSE 0
                                         END
                                     WHEN 'login' THEN
@@ -2129,11 +2129,12 @@ BEGIN;
                                 ' +
                                 CASE
                                     WHEN @get_encrypt_info = 1 THEN
-                                        'MAX(c.encrypt_option) AS encrypt_option,'
+                                        'MAX(c.encrypt_option)'
                                     ELSE
-                                        '''FALSE'' AS encrypt_option,'
+                                        ''''' '
                                 END +
-                                'MAX(sp2.dbid) AS database_id,
+                                ' AS encrypt_option,
+                                MAX(sp2.dbid) AS database_id,
                                 MAX(sp2.memusage) AS memory_usage,
                                 MAX(sp2.open_tran) AS open_tran_count,
                                 RTRIM(sp2.lastwaittype) AS wait_type,
@@ -2196,7 +2197,7 @@ BEGIN;
                                     blk.session_id = 0
                                     AND @blocker = 0
                                 )
-                            LEFT OUTER LOOP JOIN sys.dm_exec_connections AS c ON
+                           LEFT OUTER LOOP JOIN sys.dm_exec_connections AS c ON
                                 c.session_id = sp2.spid
                             CROSS APPLY
                             (
