@@ -26,7 +26,7 @@ ALTER PROC dbo.sp_WhoIsActive
 --~
     --Filters--Both inclusive and exclusive
     --Set either filter to '' to disable
-    --Valid filter types are: session, program, database, login, and host
+    --Valid filter types are: session, program, database, login, encrypted, and host
     --Session is a session ID, and either 0 or '' can be used to indicate "all" sessions
     --All other filter types support % or _ as wildcards
     @filter sysname = '',
@@ -122,7 +122,7 @@ ALTER PROC dbo.sp_WhoIsActive
         --physical_reads_delta, writes_delta, tempdb_allocations_delta, tempdb_current_delta,
         --CPU_delta, context_switches_delta, used_memory_delta, tasks, tran_start_time,
         --open_tran_count, blocking_session_id, blocked_session_count, percent_complete,
-        --host_name, login_name, database_name, start_time, login_time, program_name
+        --host_name, login_name, database_name, start_time, login_time, program_name, encrypt_option
         --
         --Note that column names in the list must be bracket-delimited. Commas and/or white
         --space are not required.
@@ -384,6 +384,9 @@ Formatted/Non:    [database_name] [sysname] NULL
 Formatted/Non:    [program_name] [sysname] NULL
     Shows the reported program/application name
 
+Formatted/Non:    [encrypt_option] [nvarchar](40) NULL
+    Shows whether the connection is encrypted.
+
 Formatted/Non:    [additional_info] [xml] NULL
     (Requires @get_additional_info option)
     Returns additional non-performance-related session/request information
@@ -449,9 +452,9 @@ BEGIN;
         RETURN;
     END;
    
-    IF @filter_type NOT IN ('session', 'program', 'database', 'login', 'host')
+    IF @filter_type NOT IN ('session', 'program', 'encrypted', 'database', 'login', 'host')
     BEGIN;
-        RAISERROR('Valid filter types are: session, program, database, login, host', 16, 1);
+        RAISERROR('Valid filter types are: session, program, encrypted, database, login, host', 16, 1);
         RETURN;
     END;
    
@@ -461,9 +464,9 @@ BEGIN;
         RETURN;
     END;
    
-    IF @not_filter_type NOT IN ('session', 'program', 'database', 'login', 'host')
+    IF @not_filter_type NOT IN ('session', 'program', 'encrypted', 'database', 'login', 'host')
     BEGIN;
-        RAISERROR('Valid filter types are: session, program, database, login, host', 16, 1);
+        RAISERROR('Valid filter types are: session, program, encrypted, database, login, host', 16, 1);
         RETURN;
     END;
    
@@ -1063,21 +1066,23 @@ BEGIN;
             UNION ALL
             SELECT '[program_name]', 44
             UNION ALL
-            SELECT '[additional_info]', 45
+            SELECT '[encrypt_option]', 45
+            UNION ALL
+            SELECT '[additional_info]', 46
             WHERE
                 @get_additional_info = 1
             UNION ALL
-            SELECT '[memory_info]', 46
+            SELECT '[memory_info]', 47
             WHERE
                 @get_memory_info = 1
             UNION ALL
-            SELECT '[start_time]', 47
+            SELECT '[start_time]', 48
             UNION ALL
-            SELECT '[login_time]', 48
+            SELECT '[login_time]', 49
             UNION ALL
-            SELECT '[request_id]', 49
+            SELECT '[request_id]', 50
             UNION ALL
-            SELECT '[collection_time]', 50
+            SELECT '[collection_time]', 51
         ) AS x ON
             x.column_name LIKE token ESCAPE '|'
     )
@@ -1256,6 +1261,8 @@ BEGIN;
             SELECT '[login_time]'
             UNION ALL
             SELECT '[program_name]'
+            UNION ALL
+            SELECT '[encrypt_option]'
         ) AS x ON
             x.column_name LIKE token ESCAPE '|'
     )
@@ -1327,6 +1334,7 @@ BEGIN;
         login_name sysname NOT NULL,
         database_name sysname NULL,
         program_name sysname NULL,
+        encrypt_option nvarchar(40) NULL,
         additional_info XML NULL,
         memory_info XML NULL,
         start_time DATETIME NOT NULL,
@@ -1390,6 +1398,7 @@ BEGIN;
                 y.request_mode,
                 y.request_status,
                 y.session_id,
+                s.encrypt_option,
                 y.resource_description,
                 y.request_count,
                 s.request_id,
@@ -1404,6 +1413,7 @@ BEGIN;
             (
                 SELECT
                     sp.spid AS session_id,
+                    c.encrypt_option AS encrypt_option,
                     CASE sp.status
                         WHEN 'sleeping' THEN CONVERT(INT, 0)
                         ELSE sp.request_id
@@ -1414,6 +1424,8 @@ BEGIN;
                     END AS start_time,
                     sp.dbid
                 FROM sys.sysprocesses AS sp
+                LEFT OUTER LOOP JOIN sys.dm_exec_connections AS c ON
+                    c.session_id = sp.spid
                 OUTER APPLY
                 (
                     SELECT TOP(1)
@@ -1456,6 +1468,11 @@ BEGIN;
                                             WHEN sp.program_name LIKE @filter THEN 1
                                             ELSE 0
                                         END
+                                    WHEN 'encrypted' THEN
+                                        CASE
+                                            WHEN c.encrypt_option LIKE @filter THEN 1
+                                            ELSE 0
+                                        END
                                     WHEN 'login' THEN
                                         CASE
                                             WHEN sp.loginame LIKE @filter THEN 1
@@ -1488,6 +1505,11 @@ BEGIN;
                                     WHEN 'program' THEN
                                         CASE
                                             WHEN sp.program_name LIKE @not_filter THEN 1
+                                            ELSE 0
+                                        END
+                                    WHEN 'encrypted' THEN
+                                        CASE
+                                            WHEN c.encrypt_option LIKE @not_filter THEN 1
                                             ELSE 0
                                         END
                                     WHEN 'login' THEN
@@ -1804,6 +1826,8 @@ BEGIN;
                 LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
                     s.session_id = sp.session_id
                     AND s.login_time = sp.login_time
+                LEFT OUTER LOOP JOIN sys.dm_exec_connections AS c ON
+                    c.session_id = sp.session_id
                 LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
                     sp.status <> ''sleeping''
                     AND r.session_id = sp.session_id
@@ -1841,6 +1865,7 @@ BEGIN;
                 host_name NVARCHAR(128),
                 login_name NVARCHAR(128),
                 program_name NVARCHAR(128),
+                encrypt_option NVARCHAR(40),
                 database_id SMALLINT,
                 memory_usage INT,
                 open_tran_count SMALLINT,
@@ -1884,6 +1909,7 @@ BEGIN;
                 host_name,
                 login_name,
                 program_name,
+                encrypt_option,
                 database_id,
                 memory_usage,
                 open_tran_count,
@@ -1917,6 +1943,7 @@ BEGIN;
                 spy.host_name,
                 spy.login_name,
                 spy.program_name,
+                spy.encrypt_option,
                 spy.database_id,
                 spy.memory_usage,
                 spy.open_tran_count,
@@ -2001,6 +2028,7 @@ BEGIN;
                         sp0.host_name,
                         sp0.login_name,
                         sp0.program_name,
+                        sp0.encrypt_option,
                         sp0.database_id,
                         sp0.memory_usage,
                         sp0.open_tran_count,
@@ -2051,6 +2079,7 @@ BEGIN;
                             sp1.host_name,
                             MAX(sp1.login_name) OVER (PARTITION BY sp1.session_id, sp1.request_id) AS login_name,
                             sp1.program_name,
+                            sp1.encrypt_option,
                             sp1.database_id,
                             MAX(sp1.memory_usage)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS memory_usage,
                             MAX(sp1.open_tran_count)  OVER (PARTITION BY sp1.session_id, sp1.request_id) AS open_tran_count,
@@ -2089,6 +2118,7 @@ BEGIN;
                                             )
                                     END COLLATE SQL_Latin1_General_CP1_CI_AS
                                 ) AS program_name,
+                                MAX(sp2.encrypt_option) as encrypt_option,
                                 MAX(sp2.dbid) AS database_id,
                                 MAX(sp2.memusage) AS memory_usage,
                                 MAX(sp2.open_tran) AS open_tran_count,
@@ -2211,6 +2241,9 @@ BEGIN;
                                         WHEN 'program' THEN
                                             'AND sp0.program_name LIKE @filter
                                             '
+                                        WHEN 'encrypted' THEN
+                                            'AND sp0.encrypt_option LIKE @filter
+                                            '
                                         WHEN 'login' THEN
                                             'AND sp0.login_name LIKE @filter
                                             '
@@ -2240,6 +2273,9 @@ BEGIN;
                                             END
                                         WHEN 'program' THEN
                                             'AND sp0.program_name NOT LIKE @not_filter
+                                            '
+                                        WHEN 'encrypted' THEN
+                                            'AND sp0.encrypt_option NOT LIKE @not_filter
                                             '
                                         WHEN 'login' THEN
                                             'AND sp0.login_name NOT LIKE @not_filter
@@ -2696,6 +2732,17 @@ BEGIN;
                     ' +
                 CASE
                     WHEN
+                        @output_column_list LIKE '%|[encrypt_option|]%' ESCAPE '|'
+                        AND @recursion = 1
+                            THEN
+                                'x.encrypt_option '
+                    ELSE
+                        ''''' '
+                END +
+                    'AS encrypt_option,
+                    ' +
+                CASE
+                    WHEN
                         @output_column_list LIKE '%|[additional_info|]%' ESCAPE '|'
                         AND @recursion = 1
                             THEN
@@ -2795,6 +2842,11 @@ BEGIN;
                                                         TYPE
                                                 ),
                                                 '
+                                            ELSE ''
+                                        END +
+                                        CASE
+                                            WHEN @output_column_list LIKE '%|[encrypt_option|]%' ESCAPE '|' THEN
+                                                'x.encrypt_option,'
                                             ELSE ''
                                         END +
                                         CASE
@@ -3094,6 +3146,7 @@ BEGIN;
                         sp.host_name,
                         sp.login_name,
                         sp.program_name,
+                        c.encrypt_option,
                         s.host_process_id,
                         COALESCE(r.text_size, s.text_size) AS text_size,
                         COALESCE(r.language, s.language) AS language,
@@ -3782,6 +3835,7 @@ BEGIN;
             login_name,
             database_name,
             program_name,
+            encrypt_option,
             additional_info,
             memory_info,
             start_time,
@@ -4925,7 +4979,6 @@ BEGIN;
                             s.schema_id = COALESCE(o.schema_id, b.schema_id)
                         WHERE
                             b.database_name = @database_name; ';
-                   
                     EXEC sp_executesql
                         @sql_n,
                         N'@database_name sysname',
@@ -5353,6 +5406,7 @@ BEGIN;
                 login_name,
                 database_name,
                 program_name,
+                encrypt_option,
                 additional_info,
                 memory_info,
                 start_time,
