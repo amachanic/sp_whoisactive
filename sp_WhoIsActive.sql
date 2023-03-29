@@ -4372,7 +4372,7 @@ BEGIN;
                             s.query_plan =
                             (
                                 SELECT
-                                    CONVERT(xml, query_plan)
+                                    TRY_CAST(query_plan as xml)
                                 FROM sys.dm_exec_text_query_plan
                                 (
                                     @plan_handle,
