@@ -45,7 +45,7 @@ jobs:
             Set-Content -Path $fullPath -Value ($outputString.TrimEnd())
           }
       - name: Commit changes
-        # requries Settings\Actions\General\Workflow permissions\Read and write permissions
+        # Requires: GitHub repo page - Settings\Actions\General\Workflow permissions\Read and write permissions
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "GitHub Actions"
