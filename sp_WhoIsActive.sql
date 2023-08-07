@@ -75,6 +75,10 @@ ALTER PROC dbo.sp_WhoIsActive
     --Get average time for past runs of an active query
     --(based on the combination of plan handle, sql handle, and offset)
     @get_avg_time BIT = 0,
+	
+	--Get session id for kill
+	@get_kill_session BIT = 0,
+
 
     --Get additional non-performance-related information about the session or request
     --text_size, language, date_format, date_first, quoted_identifier, arithabort, ansi_null_dflt_on,
@@ -157,6 +161,10 @@ OUTPUT COLUMNS
 --------------
 Formatted/Non:    [session_id] [smallint] NOT NULL
     Session ID (a.k.a. SPID)
+
+Formatted:		[kill session_id] [varchar](15) NULL
+Non-Formatted:	[kill session_id] [varchar](15) NULL
+	(Requires @get_kill_session option)
 
 Formatted:        [dd hh:mm:ss.mss] [varchar](15) NULL
 Non-Formatted:    <not returned>
@@ -435,6 +443,7 @@ BEGIN;
         OR @get_task_info IS NULL
         OR @get_locks IS NULL
         OR @get_avg_time IS NULL
+		OR @get_kill_session IS NULL
         OR @get_additional_info IS NULL
         OR @find_block_leaders IS NULL
         OR @delta_interval IS NULL
@@ -913,6 +922,9 @@ BEGIN;
         JOIN
         (
             SELECT '[session_id]' AS column_name, 1 AS default_order
+			UNION ALL
+			SELECT '[kill_session_id]', 200
+			WHERE @get_kill_session = 1
             UNION ALL
             SELECT '[dd hh:mm:ss.mss]', 2
             WHERE
@@ -5216,6 +5228,13 @@ BEGIN;
         (
             SELECT
                 session_id, ' +
+				-- kill [session_id]
+					CASE
+						WHEN @get_kill_session=1 THEN
+							'''kill '' + cast(session_id as varchar(10)) AS [kill_session_id], '
+						ELSE
+							''
+					END +
                 --[dd hh:mm:ss.mss]
                 CASE
                     WHEN @format_output IN (1, 2) THEN
