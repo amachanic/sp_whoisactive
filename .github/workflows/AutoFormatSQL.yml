@@ -3,10 +3,11 @@ name: AutoFormatSQL
 on:
   push:
     branches:
-      - master
+      - main
     paths:
       - "**.sql"
-
+permissions:
+  contents: write
 jobs:
   trim_whitespace:
     runs-on: ubuntu-latest
@@ -15,7 +16,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: "10"
+          fetch-depth: "20"
+
+      - name: git log
+        shell: pwsh
+        run: |
+          git log --pretty=format:%H --max-count=10
 
       - name: Trim trailing whitespace and replace Tabs
         shell: pwsh
@@ -45,13 +51,11 @@ jobs:
             Set-Content -Path $fullPath -Value ($outputString.TrimEnd())
           }
       - name: Commit changes
-        # Requires: GitHub repo page - Settings\Actions\General\Workflow permissions\Read and write permissions
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "GitHub Actions"
             git config user.email "actions@github.com"
             git add .
-            git commit -m "Update files"
-            git remote set-url origin "https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-            git push origin HEAD:${{ github.ref }}
+            git commit -m "Automation: Replace tabs and remove trailing spaces"
+            git push 
           fi
