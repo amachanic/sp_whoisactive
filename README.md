@@ -4,7 +4,7 @@
 [![forks badge]][forks]
 [![issues badge]][issues]
 
-`sp_WhoIsActive` is a comprehensive activity monitoring stored procedure that works for all versions of SQL Server from 2005 through 2019 and Azure SQL DB.
+`sp_WhoIsActive` is a comprehensive activity monitoring stored procedure that works for all versions of SQL Server from 2005 through 2022 and Azure SQL DB.
 
 `sp_WhoIsActive` is now officially versioned and maintained here on GitHub.
 
