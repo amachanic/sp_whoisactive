@@ -113,7 +113,7 @@ ALTER PROC dbo.sp_WhoIsActive
     --Each element in this list must be one of the valid output column names. Names must be
     --delimited by square brackets. White space, formatting, and additional characters are
     --allowed, as long as the list contains exact matches of delimited valid column names.
-    @output_column_list VARCHAR(8000) = '[dd%][session_id][sql_text][sql_command][login_name][wait_info][tasks][tran_log%][cpu%][temp%][block%][reads%][writes%][context%][physical%][query_plan][locks][%]',
+    @output_column_list VARCHAR(8000) = '[dd%][session_id][sql_text][sql_command][login_name][wait_info][tasks][tran_log%][CPU%][temp%][block%][reads%][writes%][context%][physical%][query_plan][locks][%]',
 
     --Column(s) by which to sort output, optionally with sort directions.
         --Valid column choices:
