@@ -2265,7 +2265,7 @@ BEGIN;
                             END +
                             CASE
                                 WHEN @show_system_spids = 0 THEN
-                                    'AND sp0.hostprocess > ''''
+                                    'AND sp0.hostprocess > '''' AND COALESCE(sp0.wait_type, '''') NOT IN (N''SP_SERVER_DIAGNOSTICS_SLEEP'')
                                     '
                                 ELSE
                                     ''
