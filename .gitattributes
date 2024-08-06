@@ -1,2 +1,5 @@
 # linguist overrides
 *.sql linguist-language=TSQL
+
+# converts to native line endings on checkout for all SQL files
+*.sql text=auto
