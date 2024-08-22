@@ -3082,7 +3082,10 @@ BEGIN;
                                 OR @find_block_leaders = 1
                             ) THEN
                                 'sp.wait_type COLLATE Latin1_General_Bin2 AS wait_type,
-                                sp.wait_resource COLLATE Latin1_General_Bin2 AS resource_description,
+                                CASE
+                                    WHEN CHARINDEX(N''('',sp.wait_resource) > 0 THEN TRIM(LEFT(sp.wait_resource,CHARINDEX(N''('',sp.wait_resource)-1)) COLLATE Latin1_General_Bin2
+                                    ELSE sp.wait_resource COLLATE Latin1_General_Bin2
+                                END AS resource_description,
                                 sp.wait_time AS wait_duration_ms,
                                 '
                             ELSE
