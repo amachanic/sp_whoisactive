@@ -1814,11 +1814,7 @@ BEGIN;
                             s.is_user_process = 0
                             AND sp.is_user_process = 0
                         )
-                        OR
-                        (
-                            r.start_time = s.last_request_start_time
-                            AND s.last_request_end_time <= sp.last_request_end_time
-                        )
+                        OR r.start_time = s.last_request_start_time
                     ) ';
 
         SET @sql =
