@@ -3070,7 +3070,7 @@ BEGIN;
                                 'sp.memory_usage + COALESCE(r.granted_query_memory, 0) AS used_memory,
                                 '
                         END +
-                        'LOWER(sp.status) AS status,
+                        'LOWER(ISNULL(r.status, sp.status)) AS status,
                         COALESCE(r.sql_handle, sp.sql_handle) AS sql_handle,
                         COALESCE(r.statement_start_offset, sp.statement_start_offset) AS statement_start_offset,
                         COALESCE(r.statement_end_offset, sp.statement_end_offset) AS statement_end_offset,
