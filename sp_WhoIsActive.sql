@@ -1916,7 +1916,22 @@ BEGIN;
                 spy.sql_handle,
                 spy.host_name,
                 spy.login_name,
-                spy.program_name,
+                ' +
+				CASE WHEN @get_additional_info = 1 THEN
+					'CASE 
+						WHEN LEFT(spy.program_name, 15) = ''SQLAgent - TSQL'' THEN 
+						    (SELECT TOP 1 ''SQL Job = ''+ j.name from msdb.dbo.sysjobs j
+							INNER JOIN msdb.dbo.sysjobsteps s ON
+								j.job_id = s.job_id
+							WHERE RIGHT(CAST(s.job_id AS NVARCHAR(50)), 10) = RIGHT(SUBSTRING(spy.program_name, 30, 34), 10))
+						ELSE spy.program_name
+					END as program_name, 
+					'
+				ELSE
+				'spy.program_name, 
+				' 
+				END +
+				'
                 spy.database_id,
                 spy.memory_usage,
                 spy.open_tran_count,
