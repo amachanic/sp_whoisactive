@@ -83,6 +83,7 @@ ALTER PROC dbo.sp_WhoIsActive
     --
     --If a SQL Agent job is running, an subnode called agent_info will be populated with some or all of
     --the following: job_id, job_name, step_id, step_name, msdb_query_error (in the event of an error)
+    --The resolved job name will also be shown in the top-level [program_name] column
     --
     --If @get_task_info is set to 2 and a lock wait is detected, a subnode called block_info will be
     --populated with some or all of the following: lock_type, database_name, object_id, file_id, hobt_id,
@@ -383,6 +384,8 @@ Formatted/Non:    [database_name] [sysname] NULL
 
 Formatted/Non:    [program_name] [sysname] NULL
     Shows the reported program/application name
+    When @get_additional_info is enabled and a SQL Agent job is detected, the hex job_id
+    is resolved to: SQLAgent - <job_name> (Step N: <step_name>)
 
 Formatted/Non:    [additional_info] [xml] NULL
     (Requires @get_additional_info option)
@@ -5087,6 +5090,22 @@ BEGIN;
                                 insert text{sql:variable("@step_name")}
                                 into (/additional_info/agent_job_info/step_name)[1]
                             '')
+                        FROM #sessions AS s
+                        WHERE
+                            s.session_id = @session_id
+                            AND s.recursion = 1
+                        OPTION (KEEPFIXED PLAN);
+
+                        UPDATE s
+                        SET
+                            s.program_name =
+                                CONVERT
+                                (
+                                    sysname,
+                                    N''SQLAgent - '' + @job_name +
+                                    N'' (Step '' + CONVERT(NVARCHAR(10), @step_id) +
+                                    COALESCE(N'': '' + @step_name, N'''') + N'')'' 
+                                )
                         FROM #sessions AS s
                         WHERE
                             s.session_id = @session_id
