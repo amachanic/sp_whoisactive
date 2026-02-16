@@ -4039,6 +4039,7 @@ BEGIN;
                         s.sql_text =
                         (
                             SELECT
+                                REPLACE(REPLACE(
                                 REPLACE
                                 (
                                     REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
@@ -4072,7 +4073,7 @@ BEGIN;
                                         NCHAR(11),N'?'),NCHAR(8),N'?'),NCHAR(7),N'?'),NCHAR(6),N'?'),NCHAR(5),N'?'),NCHAR(4),N'?'),NCHAR(3),N'?'),NCHAR(2),N'?'),NCHAR(1),N'?'),
                                     NCHAR(0),
                                     N''
-                                ) AS [processing-instruction(query)]
+                                ), N'<?', N'??'), N'?>', N'??') AS [processing-instruction(query)]
                             FOR XML
                                 PATH(''),
                                 TYPE
@@ -4233,7 +4234,7 @@ BEGIN;
                                 CONVERT
                                 (
                                     NVARCHAR(MAX),
-                                    N'--' + NCHAR(13) + NCHAR(10) + br.EventInfo + NCHAR(13) + NCHAR(10) + N'--' COLLATE Latin1_General_Bin2
+                                    N'--' + NCHAR(13) + NCHAR(10) + REPLACE(REPLACE(br.EventInfo, N'<?', N'??'), N'?>', N'??') + NCHAR(13) + NCHAR(10) + N'--' COLLATE Latin1_General_Bin2
                                 ),
                                 NCHAR(31),N'?'),NCHAR(30),N'?'),NCHAR(29),N'?'),NCHAR(28),N'?'),NCHAR(27),N'?'),NCHAR(26),N'?'),NCHAR(25),N'?'),NCHAR(24),N'?'),NCHAR(23),N'?'),NCHAR(22),N'?'),
                                 NCHAR(21),N'?'),NCHAR(20),N'?'),NCHAR(19),N'?'),NCHAR(18),N'?'),NCHAR(17),N'?'),NCHAR(16),N'?'),NCHAR(15),N'?'),NCHAR(14),N'?'),NCHAR(12),N'?'),
@@ -4409,7 +4410,7 @@ BEGIN;
                                         N'-- Could not render showplan due to XML data type limitations. ' + NCHAR(13) + NCHAR(10) +
                                         N'-- To see the graphical plan save the XML below as a .SQLPLAN file and re-open in SSMS.' + NCHAR(13) + NCHAR(10) +
                                         N'--' + NCHAR(13) + NCHAR(10) +
-                                            REPLACE(qp.query_plan, N'<RelOp', NCHAR(13)+NCHAR(10)+N'<RelOp') +
+                                            REPLACE(REPLACE(REPLACE(qp.query_plan, N'<RelOp', NCHAR(13)+NCHAR(10)+N'<RelOp'), N'<?', N'??'), N'?>', N'??') +
                                             NCHAR(13) + NCHAR(10) + N'--' COLLATE Latin1_General_Bin2 AS [processing-instruction(query_plan)]
                                     FROM sys.dm_exec_text_query_plan
                                     (
