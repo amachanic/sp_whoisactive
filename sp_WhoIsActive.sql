@@ -2849,7 +2849,7 @@ BEGIN;
                                     x.wait_order,
                                     x.is_next_candidate,
                                     x.dop,
-                                    CAST(x.query_cost AS NUMERIC(38, 4)) AS query_cost
+                                    CAST(x.query_cost AS DECIMAL(38, 0)) AS query_cost
                                 FOR XML
                                     PATH(''memory_grant''),
                                     TYPE
