@@ -1406,10 +1406,12 @@ BEGIN;
                     sp.spid AS session_id,
                     CASE sp.status
                         WHEN 'sleeping' THEN CONVERT(INT, 0)
+                        WHEN 'dormant' THEN CONVERT(INT, 0)
                         ELSE sp.request_id
                     END AS request_id,
                     CASE sp.status
                         WHEN 'sleeping' THEN sp.last_batch
+                        WHEN 'dormant' THEN sp.last_batch
                         ELSE COALESCE(req.start_time, sp.last_batch)
                     END AS start_time,
                     sp.dbid
@@ -1805,7 +1807,7 @@ BEGIN;
                     s.session_id = sp.session_id
                     AND s.login_time = sp.login_time
                 LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
-                    sp.status <> ''sleeping''
+                    sp.status NOT IN (''sleeping'', ''dormant'')
                     AND r.session_id = sp.session_id
                     AND r.request_id = sp.request_id
                     AND
@@ -2158,6 +2160,8 @@ BEGIN;
                                     CASE sp2.status
                                         WHEN ''sleeping'' THEN
                                             CONVERT(INT, 0)
+                                        WHEN ''dormant'' THEN
+                                            CONVERT(INT, 0)
                                         ELSE
                                             sp2.request_id
                                     END AS request_id,
@@ -2272,12 +2276,12 @@ BEGIN;
                             END +
                             CASE @show_sleeping_spids
                                 WHEN 0 THEN
-                                    'AND sp0.status <> ''sleeping''
+                                    'AND sp0.status NOT IN (''sleeping'', ''dormant'')
                                     '
                                 WHEN 1 THEN
                                     'AND
                                     (
-                                        sp0.status <> ''sleeping''
+                                        sp0.status NOT IN (''sleeping'', ''dormant'')
                                         OR sp0.open_tran_count > 0
                                     )
                                     '
@@ -3384,7 +3388,7 @@ BEGIN;
                                                     WHERE
                                                         sp2.session_id = t.session_id
                                                         AND sp2.request_id = t.request_id
-                                                        AND sp2.status <> ''sleeping''
+                                                        AND sp2.status NOT IN (''sleeping'', ''dormant'')
                                                 ) AS sp20
                                                 LEFT OUTER HASH JOIN
                                                 (
@@ -3702,7 +3706,7 @@ BEGIN;
                     tempdb_info.session_id = y.session_id
                     AND tempdb_info.request_id =
                         CASE
-                            WHEN y.status = N''sleeping'' THEN
+                            WHEN y.status IN (N''sleeping'', N''dormant'') THEN
                                 -1
                             ELSE
                                 y.request_id
@@ -5358,7 +5362,7 @@ BEGIN;
                 start_time,
                 login_time,
                 CASE
-                    WHEN status = N''sleeping'' THEN NULL
+                    WHEN status IN (N''sleeping'', N''dormant'') THEN NULL
                     ELSE request_id
                 END AS request_id,
                 GETDATE() AS collection_time '
