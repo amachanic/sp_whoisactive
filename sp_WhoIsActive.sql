@@ -1620,7 +1620,7 @@ BEGIN;
                             END
                         ) AS page_no,
                         CASE
-                            WHEN tl.resource_type IN ('PAGE', 'KEY', 'RID', 'HOBT') THEN tl.resource_associated_entity_id
+                            WHEN tl.resource_type IN ('PAGE', 'KEY', 'RID', 'HOBT', 'XACT') THEN tl.resource_associated_entity_id
                             ELSE NULL
                         END AS hobt_id,
                         CASE
