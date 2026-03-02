@@ -2137,7 +2137,12 @@ BEGIN;
                                     CONVERT(INT, NULL) AS database_id
                                 WHERE
                                     @blocker = 0
-
+                            ' +
+                            CASE
+                                WHEN
+                                    ISNULL(HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER STATE'), 0) = 1
+                                    OR ISNULL(HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER PERFORMANCE STATE'), 0) = 1
+                                THEN '
                                 UNION ALL
 
                                 SELECT TOP(@i)
@@ -2147,6 +2152,10 @@ BEGIN;
                                 FROM sys.dm_broker_activated_tasks
                                 WHERE
                                     @blocker = 0
+                                '
+                                ELSE
+                                    ''
+                            END + '
                             ) AS blk
                             INNER JOIN sys.sysprocesses AS sp2 ON
                                 sp2.spid = blk.session_id
