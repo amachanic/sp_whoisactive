@@ -6,8 +6,8 @@ SET NUMERIC_ROUNDABORT OFF;
 SET ARITHABORT ON;
 GO
 
-IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 'sp_WhoIsActive_2019')
-    EXEC ('CREATE PROC dbo.sp_WhoIsActive_2019 AS SELECT ''stub version, to be replaced''')
+IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.ROUTINES WHERE ROUTINE_NAME = 'sp_WhoIsActive')
+    EXEC ('CREATE PROC dbo.sp_WhoIsActive AS SELECT ''stub version, to be replaced''')
 GO
 
 /*********************************************************************************************
@@ -18,10 +18,14 @@ Feedback: https://github.com/amachanic/sp_whoisactive/issues
 Releases: https://github.com/amachanic/sp_whoisactive/releases
 Docs: http://whoisactive.com
 
+Compatibility: SQL Server 2005 - 2008
+    This version avoids features unavailable before SQL Server 2012 (e.g. TRY_CAST).
+    For SQL Server 2012+, use the /2019 folder or the current version in the root folder.
+
 License:
     https://github.com/amachanic/sp_whoisactive/blob/master/LICENSE
 *********************************************************************************************/
-ALTER PROC dbo.sp_WhoIsActive_2019
+ALTER PROC dbo.sp_WhoIsActive
 (
 --~
     --Filters--Both inclusive and exclusive
