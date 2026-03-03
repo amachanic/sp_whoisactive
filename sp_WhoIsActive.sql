@@ -1302,7 +1302,6 @@ BEGIN;
         tempdb_allocations BIGINT NULL,
         tempdb_current BIGINT NULL,
         CPU BIGINT NULL,
-        thread_CPU_snapshot BIGINT NULL,
         context_switches BIGINT NULL,
         used_memory BIGINT NOT NULL,
         max_used_memory BIGINT NULL,
@@ -2459,18 +2458,6 @@ BEGIN;
                     ' +
                 CASE
                     WHEN
-                        @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-                        AND @get_task_info = 2
-                        AND @sys_info = 1
-                            THEN
-                                'x.thread_CPU_snapshot '
-                    ELSE
-                        '0 '
-                END +
-                    'AS thread_CPU_snapshot,
-                    ' +
-                CASE
-                    WHEN
                         @output_column_list LIKE '%|[context_switches|]%' ESCAPE '|'
                         OR @output_column_list LIKE '%|[context_switches_delta|]%' ESCAPE '|'
                             THEN
@@ -3010,7 +2997,6 @@ BEGIN;
                                 tasks.tasks,
                                 tasks.block_info,
                                 tasks.wait_info AS task_wait_info,
-                                tasks.thread_CPU_snapshot,
                                 '
                             ELSE
                                 ''
@@ -3219,8 +3205,7 @@ BEGIN;
                                 task_nodes.task_node.value(''(context_switches/text())[1]'', ''BIGINT'') AS context_switches,
                                 task_nodes.task_node.value(''(tasks/text())[1]'', ''INT'') AS tasks,
                                 task_nodes.task_node.value(''(block_info/text())[1]'', ''NVARCHAR(4000)'') AS block_info,
-                                task_nodes.task_node.value(''(waits/text())[1]'', ''NVARCHAR(4000)'') AS wait_info,
-                                task_nodes.task_node.value(''(thread_CPU_snapshot/text())[1]'', ''BIGINT'') AS thread_CPU_snapshot
+                                task_nodes.task_node.value(''(waits/text())[1]'', ''NVARCHAR(4000)'') AS wait_info
                             FROM
                             (
                                 SELECT TOP(@i)
@@ -3261,12 +3246,6 @@ BEGIN;
                                             ELSE
                                                 NULL
                                         END AS [context_switches],
-                                        CASE waits.r
-                                            WHEN 1 THEN
-                                                waits.thread_CPU_snapshot
-                                            ELSE
-                                                NULL
-                                        END AS [thread_CPU_snapshot],
                                         CASE waits.r
                                             WHEN 1 THEN
                                                 waits.tasks
@@ -3336,7 +3315,6 @@ BEGIN;
                                                 task_info.request_id,
                                                 task_info.physical_io,
                                                 task_info.context_switches,
-                                                task_info.thread_CPU_snapshot,
                                                 task_info.num_tasks AS tasks,
                                                 CASE
                                                     WHEN task_info.runnable_time IS NOT NULL THEN
@@ -3356,17 +3334,6 @@ BEGIN;
                                                     t.request_id,
                                                     SUM(CONVERT(BIGINT, t.pending_io_count)) OVER (PARTITION BY t.session_id, t.request_id) AS physical_io,
                                                     SUM(CONVERT(BIGINT, t.context_switches_count)) OVER (PARTITION BY t.session_id, t.request_id) AS context_switches,
-                                                    ' +
-                                                    CASE
-                                                        WHEN
-                                                            @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-                                                            AND @sys_info = 1
-                                                            THEN
-                                                                'SUM(tr.usermode_time + tr.kernel_time) OVER (PARTITION BY t.session_id, t.request_id) '
-                                                        ELSE
-                                                            'CONVERT(BIGINT, NULL) '
-                                                    END +
-                                                        ' AS thread_CPU_snapshot,
                                                     COUNT(*) OVER (PARTITION BY t.session_id, t.request_id) AS num_tasks,
                                                     t.task_address,
                                                     t.task_state,
@@ -3421,18 +3388,6 @@ BEGIN;
                                                 ) AS w ON
                                                     w.worker_address = t.worker_address
                                                 ' +
-                                                CASE
-                                                    WHEN
-                                                        @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-                                                        AND @sys_info = 1
-                                                        THEN
-                                                            'LEFT OUTER HASH JOIN sys.dm_os_threads AS tr ON
-                                                                tr.thread_address = w.thread_address
-                                                                AND @first_collection_ms_ticks >= w.task_bound_ms_ticks
-                                                            '
-                                                    ELSE
-                                                        ''
-                                                END +
                                             ') AS task_info
                                             LEFT OUTER HASH JOIN
                                             (
@@ -3620,7 +3575,6 @@ BEGIN;
                                                 task_info.request_id,
                                                 task_info.physical_io,
                                                 task_info.context_switches,
-                                                task_info.thread_CPU_snapshot,
                                                 task_info.num_tasks,
                                                 CASE
                                                     WHEN task_info.runnable_time IS NOT NULL THEN
@@ -3763,7 +3717,6 @@ BEGIN;
             tempdb_allocations,
             tempdb_current,
             CPU,
-            thread_CPU_snapshot,
             context_switches,
             used_memory,
             max_used_memory,
@@ -5319,35 +5272,7 @@ BEGIN;
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'tempdb_allocations_delta') +
                         --this is the only one that can (legitimately) go negative
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'tempdb_current_delta') +
-                        --CPU_delta
-                        --leaving this one hardcoded, as there is a bit of different interaction here
-                        N'
-                        CASE
-                            WHEN
-                                first_request_start_time = last_request_start_time
-                                AND num_events = 2
-                                    THEN
-                                        CASE
-                                            WHEN
-                                                thread_CPU_delta > CPU_delta
-                                                AND thread_CPU_delta > 0
-                                                    THEN ' +
-                                                        CASE @format_output
-                                                            WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, thread_CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
-                                                            WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
-                                                            ELSE N'thread_CPU_delta '
-                                                        END + N'
-                                            WHEN CPU_delta >= 0 THEN ' +
-                                                CASE @format_output
-                                                    WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
-                                                    WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
-                                                    ELSE N'CPU_delta '
-                                                END + N'
-                                            ELSE NULL
-                                        END
-                            ELSE
-                                NULL
-                        END AS CPU_delta, ' +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'CPU_delta') +
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'context_switches_delta') +
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'used_memory_delta') +
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'max_used_memory_delta')
@@ -5452,8 +5377,6 @@ BEGIN;
                                 MIN(tempdb_current * recursion) OVER (PARTITION BY session_id, request_id) AS tempdb_current_delta,
                             MAX(CPU * recursion) OVER (PARTITION BY session_id, request_id) +
                                 MIN(CPU * recursion) OVER (PARTITION BY session_id, request_id) AS CPU_delta,
-                            MAX(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) +
-                                MIN(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) AS thread_CPU_delta,
                             MAX(context_switches * recursion) OVER (PARTITION BY session_id, request_id) +
                                 MIN(context_switches * recursion) OVER (PARTITION BY session_id, request_id) AS context_switches_delta,
                             MAX(used_memory * recursion) OVER (PARTITION BY session_id, request_id) +
