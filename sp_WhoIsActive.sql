@@ -1563,9 +1563,8 @@ BEGIN;
                                 ELSE '.' + tl.resource_subtype
                             END AS resource_type,
                         COALESCE(DB_NAME(tl.resource_database_id), N'(null)') AS database_name,
-                        CONVERT
+                        TRY_CAST
                         (
-                            INT,
                             CASE
                                 WHEN tl.resource_type = 'OBJECT' THEN tl.resource_associated_entity_id
                                 WHEN tl.resource_description LIKE '%object_id = %' THEN
@@ -1587,19 +1586,19 @@ BEGIN;
                                     )
                                 ELSE NULL
                             END
+                            AS INT
                         ) AS object_id,
-                        CONVERT
+                        TRY_CAST
                         (
-                            INT,
                             CASE
-                                WHEN tl.resource_type = 'FILE' THEN CONVERT(INT, tl.resource_description)
+                                WHEN tl.resource_type = 'FILE' THEN TRY_CAST(tl.resource_description AS INT)
                                 WHEN tl.resource_type IN ('PAGE', 'EXTENT', 'RID') THEN LEFT(tl.resource_description, CHARINDEX(':', tl.resource_description)-1)
                                 ELSE NULL
                             END
+                            AS INT
                         ) AS file_id,
-                        CONVERT
+                        TRY_CAST
                         (
-                            INT,
                             CASE
                                 WHEN tl.resource_type IN ('PAGE', 'EXTENT', 'RID') THEN
                                     SUBSTRING
@@ -1618,6 +1617,7 @@ BEGIN;
                                     )
                                 ELSE NULL
                             END
+                            AS INT
                         ) AS page_no,
                         CASE
                             WHEN tl.resource_type IN ('PAGE', 'KEY', 'RID', 'HOBT', 'XACT') THEN tl.resource_associated_entity_id
@@ -1627,9 +1627,8 @@ BEGIN;
                             WHEN tl.resource_type = 'ALLOCATION_UNIT' THEN tl.resource_associated_entity_id
                             ELSE NULL
                         END AS allocation_unit_id,
-                        CONVERT
+                        TRY_CAST
                         (
-                            INT,
                             CASE
                                 WHEN
                                     /*TODO: Deal with server principals*/
@@ -1653,10 +1652,10 @@ BEGIN;
                                     )
                                 ELSE NULL
                             END
+                            AS INT
                         ) AS index_id,
-                        CONVERT
+                        TRY_CAST
                         (
-                            INT,
                             CASE
                                 WHEN tl.resource_description LIKE '%schema_id = %' THEN
                                     (
@@ -1677,10 +1676,10 @@ BEGIN;
                                     )
                                 ELSE NULL
                             END
+                            AS INT
                         ) AS schema_id,
-                        CONVERT
+                        TRY_CAST
                         (
-                            INT,
                             CASE
                                 WHEN tl.resource_description LIKE '%principal_id = %' THEN
                                     (
@@ -1701,6 +1700,7 @@ BEGIN;
                                     )
                                 ELSE NULL
                             END
+                            AS INT
                         ) AS principal_id,
                         tl.request_mode,
                         tl.request_status,
@@ -4861,7 +4861,7 @@ BEGIN;
                 database_name,
                 object_id,
                 hobt_id,
-                CONVERT(INT, SUBSTRING(schema_node, CHARINDEX(' = ', schema_node) + 3, LEN(schema_node))) AS schema_id
+                TRY_CAST(SUBSTRING(schema_node, CHARINDEX(' = ', schema_node) + 3, LEN(schema_node)) AS INT) AS schema_id
             FROM
             (
                 SELECT
