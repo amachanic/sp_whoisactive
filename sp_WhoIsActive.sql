@@ -452,37 +452,37 @@ BEGIN;
         RAISERROR('Input parameters cannot be NULL', 16, 1);
         RETURN;
     END;
-   
+
     IF @filter_type NOT IN ('session', 'program', 'database', 'login', 'host')
     BEGIN;
         RAISERROR('Valid filter types are: session, program, database, login, host', 16, 1);
         RETURN;
     END;
-   
+
     IF @filter_type = 'session' AND @filter LIKE '%[^0123456789]%'
     BEGIN;
         RAISERROR('Session filters must be valid integers', 16, 1);
         RETURN;
     END;
-   
+
     IF @not_filter_type NOT IN ('session', 'program', 'database', 'login', 'host')
     BEGIN;
         RAISERROR('Valid filter types are: session, program, database, login, host', 16, 1);
         RETURN;
     END;
-   
+
     IF @not_filter_type = 'session' AND @not_filter LIKE '%[^0123456789]%'
     BEGIN;
         RAISERROR('Session filters must be valid integers', 16, 1);
         RETURN;
     END;
-   
+
     IF @show_sleeping_spids NOT IN (0, 1, 2)
     BEGIN;
         RAISERROR('Valid values for @show_sleeping_spids are: 0, 1, or 2', 16, 1);
         RETURN;
     END;
-   
+
     IF @get_plans NOT IN (0, 1, 2)
     BEGIN;
         RAISERROR('Valid values for @get_plans are: 0, 1, or 2', 16, 1);
@@ -720,7 +720,7 @@ BEGIN;
         ORDER BY
             param_group,
             group_order;
-       
+
         WITH
         a0 AS
         (SELECT 1 AS n UNION ALL SELECT 1),
@@ -968,7 +968,7 @@ BEGIN;
             UNION ALL
             SELECT '[physical_io_delta]', 17
             WHERE
-                @delta_interval > 0   
+                @delta_interval > 0
                 AND @get_task_info = 2
             UNION ALL
             SELECT '[reads_delta]', 18
@@ -1104,13 +1104,13 @@ BEGIN;
                 1,
                 ''
             );
-   
+
     IF COALESCE(RTRIM(@output_column_list), '') = ''
     BEGIN;
         RAISERROR('No valid column matches found in @output_column_list or no columns remain due to selected options.', 16, 1);
         RETURN;
     END;
-   
+
     IF @destination_table <> ''
     BEGIN;
         SET @destination_table =
@@ -1120,7 +1120,7 @@ BEGIN;
             COALESCE(QUOTENAME(PARSENAME(@destination_table, 2)) + '.', '') +
             --table
             COALESCE(QUOTENAME(PARSENAME(@destination_table, 1)), '');
-           
+
         IF COALESCE(RTRIM(@destination_table), '') = ''
         BEGIN;
             RAISERROR('Destination table not properly formatted.', 16, 1);
@@ -1374,7 +1374,7 @@ BEGIN;
 
         --Used for the delta pull
         REDO:;
-       
+
         IF
             @get_locks = 1
             AND @recursion = 1
@@ -1799,7 +1799,7 @@ BEGIN;
             CREATE STATISTICS s_principal_name ON #locks (principal_name)
             WITH SAMPLE 0 ROWS, NORECOMPUTE;
         END;
-       
+
         DECLARE
             @sql VARCHAR(MAX),
             @sql_n NVARCHAR(MAX),
@@ -2140,7 +2140,12 @@ BEGIN;
                                     CONVERT(INT, NULL) AS database_id
                                 WHERE
                                     @blocker = 0
-
+                            ' +
+                            CASE
+                                WHEN
+                                    ISNULL(HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER STATE'), 0) = 1
+                                    OR ISNULL(HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER PERFORMANCE STATE'), 0) = 1
+                                THEN '
                                 UNION ALL
 
                                 SELECT TOP(@i)
@@ -2150,6 +2155,10 @@ BEGIN;
                                 FROM sys.dm_broker_activated_tasks
                                 WHERE
                                     @blocker = 0
+                                '
+                                ELSE
+                                    ''
+                            END + '
                             ) AS blk
                             INNER JOIN sys.sysprocesses AS sp2 ON
                                 sp2.spid = blk.session_id
@@ -2824,21 +2833,21 @@ BEGIN;
                         (
                             SELECT TOP(@i)
                             (
-                                SELECT TOP(@i)   
+                                SELECT TOP(@i)
                                     x.request_time,
                                     x.grant_time,
                                     x.wait_time_ms,
-                                    x.requested_memory_kb,   
+                                    x.requested_memory_kb,
                                     x.mg_granted_memory_kb AS granted_memory_kb,
                                     x.mg_used_memory_kb AS used_memory_kb,
                                     x.max_used_memory_kb,
-                                    x.ideal_memory_kb,   
+                                    x.ideal_memory_kb,
                                     x.required_memory_kb,
                                     x.queue_id,
                                     x.wait_order,
                                     x.is_next_candidate,
                                     x.dop,
-                                    CAST(x.query_cost AS NUMERIC(38, 4)) AS query_cost
+                                    CAST(x.query_cost AS DECIMAL(38, 0)) AS query_cost
                                 FOR XML
                                     PATH(''memory_grant''),
                                     TYPE
@@ -2859,7 +2868,7 @@ BEGIN;
                                     TYPE
                             ),
                             (
-                                SELECT TOP(@i)   
+                                SELECT TOP(@i)
                                     x.wg_name AS name,
                                     x.request_max_memory_grant_percent,
                                     x.request_max_cpu_time_sec,
@@ -2870,7 +2879,7 @@ BEGIN;
                                     TYPE
                             ),
                             (
-                                SELECT TOP(@i)   
+                                SELECT TOP(@i)
                                     x.rp_name AS name,
                                     x.min_memory_percent,
                                     x.max_memory_percent,
@@ -2885,7 +2894,7 @@ BEGIN;
                             FOR XML
                                 PATH(''memory_info''),
                                 TYPE
-                        )               
+                        )
                     '
                     ELSE
                         'NULL '
@@ -3767,7 +3776,7 @@ BEGIN;
             open_tran_count,
             sql_handle,
             statement_start_offset,
-            statement_end_offset,       
+            statement_end_offset,
             sql_text,
             plan_handle,
             blocking_session_id,
@@ -3796,7 +3805,7 @@ BEGIN;
                 OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|'
                 OR @output_column_list LIKE '%|[implicit_tran|]%' ESCAPE '|'
             )
-        BEGIN;   
+        BEGIN;
             DECLARE @i INT;
             SET @i = 2147483647;
 
@@ -3949,9 +3958,9 @@ BEGIN;
                                         WHERE
                                             s1.transaction_id = s_tran.transaction_id
                                             AND s1.recursion = 1
-                                           
+
                                         UNION ALL
-                                   
+
                                         SELECT TOP(1)
                                             s2.session_id,
                                             s2.request_id
@@ -3983,7 +3992,7 @@ BEGIN;
         END;
 
         --Variables for text and plan collection
-        DECLARE   
+        DECLARE
             @session_id SMALLINT,
             @request_id INT,
             @sql_handle VARBINARY(64),
@@ -4095,9 +4104,9 @@ BEGIN;
                                     text,
                                     0 AS row_num
                                 FROM sys.dm_exec_sql_text(@sql_handle)
-                               
+
                                 UNION ALL
-                               
+
                                 SELECT
                                     NULL,
                                     1 AS row_num
@@ -4825,7 +4834,7 @@ BEGIN;
             WITH SAMPLE 0 ROWS, NORECOMPUTE;
             CREATE STATISTICS s_query_error ON #blocked_requests (query_error)
             WITH SAMPLE 0 ROWS, NORECOMPUTE;
-       
+
             INSERT #blocked_requests
             (
                 session_id,
@@ -4864,20 +4873,20 @@ BEGIN;
                     OR t.hobt_id IS NOT NULL
                     OR t.schema_node IS NOT NULL
                 );
-           
+
             DECLARE blocks_cursor
             CURSOR LOCAL FAST_FORWARD
             FOR
                 SELECT DISTINCT
                     database_name
                 FROM #blocked_requests;
-               
+
             OPEN blocks_cursor;
-           
+
             FETCH NEXT FROM blocks_cursor
             INTO
                 @database_name;
-           
+
             WHILE @@FETCH_STATUS = 0
             BEGIN;
                 BEGIN TRY;
@@ -4920,7 +4929,7 @@ BEGIN;
                             s.schema_id = COALESCE(o.schema_id, b.schema_id)
                         WHERE
                             b.database_name = @database_name; ';
-                   
+
                     EXEC sp_executesql
                         @sql_n,
                         N'@database_name sysname',
@@ -4954,10 +4963,10 @@ BEGIN;
                 INTO
                     @database_name;
             END;
-           
+
             CLOSE blocks_cursor;
             DEALLOCATE blocks_cursor;
-           
+
             UPDATE s
             SET
                 additional_info.modify
@@ -5111,7 +5120,7 @@ BEGIN;
                 BEGIN CATCH;
                     DECLARE @msdb_error_message NVARCHAR(256);
                     SET @msdb_error_message = ERROR_MESSAGE();
-               
+
                     UPDATE s
                     SET
                         additional_info.modify
@@ -5142,7 +5151,7 @@ BEGIN;
                 WHERE
                     s.recursion = 1
             OPTION (KEEPFIXED PLAN);
-           
+
             OPEN agent_cursor;
 
             FETCH NEXT FROM agent_cursor
@@ -5168,7 +5177,7 @@ BEGIN;
             CLOSE agent_cursor;
             DEALLOCATE agent_cursor;
         END;
-       
+
         IF
             @delta_interval > 0
             AND @recursion <> 1
