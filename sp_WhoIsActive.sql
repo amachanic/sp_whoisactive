@@ -2775,21 +2775,7 @@ BEGIN;
                                                 '(
                                                     SELECT TOP(1)
                                                         CONVERT(uniqueidentifier, CONVERT(XML, '''').value(''xs:hexBinary( substring(sql:column("agent_info.job_id_string"), 0) )'', ''binary(16)'')) AS job_id,
-                                                        agent_info.step_id,
-                                                        (
-                                                            SELECT TOP(1)
-                                                                NULL
-                                                            FOR XML
-                                                                PATH(''job_name''),
-                                                                TYPE
-                                                        ),
-                                                        (
-                                                            SELECT TOP(1)
-                                                                NULL
-                                                            FOR XML
-                                                                PATH(''step_name''),
-                                                                TYPE
-                                                        )
+                                                        agent_info.step_id
                                                     FROM
                                                     (
                                                         SELECT TOP(1)
@@ -5072,32 +5058,41 @@ BEGIN;
                     BEGIN;
                         UPDATE s
                         SET
-                            additional_info.modify
-                            (''
-                                insert text{sql:variable("@job_name")}
-                                into (/additional_info/agent_job_info/job_name)[1]
-                            '')
-                        FROM #sessions AS s
-                        WHERE
-                            s.session_id = @session_id
-                            AND s.recursion = 1
-                        OPTION (KEEPFIXED PLAN);
-                       
-                        UPDATE s
-                        SET
-                            additional_info.modify
-                            (''
-                                insert text{sql:variable("@step_name")}
-                                into (/additional_info/agent_job_info/step_name)[1]
-                            '')
-                        FROM #sessions AS s
-                        WHERE
-                            s.session_id = @session_id
-                            AND s.recursion = 1
-                        OPTION (KEEPFIXED PLAN);
+                            s.additional_info = 
+                                CONVERT(
+                                    XML, 
+                                    ''<additional_info>'' +
+                                        REPLACE(REPLACE(
+                                            CONVERT(
+                                                NVARCHAR(MAX),
+                                                (
+                                                    SELECT
+                                                        y.n
+                                                    FROM
+                                                    (
+                                                        SELECT
+                                                            c.query(''.'') AS n
+                                                        FROM s.additional_info.nodes(''/additional_info/*'') AS n (c)
+                                                        WHERE
+                                                            c.value(''local-name(.)'', ''NVARCHAR(50)'') <> ''agent_job_info''
 
-                        UPDATE s
-                        SET
+                                                        UNION ALL
+
+                                                        SELECT
+                                                            (
+                                                                SELECT
+                                                                    @job_id AS job_id,
+                                                                    @step_id AS step_id,
+                                                                    @job_name AS job_name,
+                                                                    @step_name AS step_name
+                                                                FOR XML PATH(''''), ROOT(''agent_job_info''), TYPE
+                                                            )
+                                                    ) AS y
+                                                    FOR XML PATH(''''), TYPE
+                                                )
+                                            ),''<n>'',''''),''</n>'','''')
+                                        + ''</additional_info>''
+                                ),
                             s.program_name =
                                 CONVERT
                                 (
