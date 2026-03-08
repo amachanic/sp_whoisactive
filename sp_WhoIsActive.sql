@@ -79,7 +79,9 @@ ALTER PROC dbo.sp_WhoIsActive
     --Get additional non-performance-related information about the session or request
     --text_size, language, date_format, date_first, quoted_identifier, arithabort, ansi_null_dflt_on,
     --ansi_defaults, ansi_warnings, ansi_padding, ansi_nulls, concat_null_yields_null,
-    --transaction_isolation_level, encrypt_option, lock_timeout, deadlock_priority, row_count, command_type
+    --transaction_isolation_level, lock_timeout, deadlock_priority, row_count, command_type
+    --
+    --A subnode called connection_info will be populated with: encrypt_option, client_net_address, net_transport
     --
     --If a SQL Agent job is running, an subnode called agent_info will be populated with some or all of
     --the following: job_id, job_name, step_id, step_name, msdb_query_error (in the event of an error)
@@ -1817,8 +1819,6 @@ BEGIN;
                 LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
                     s.session_id = sp.session_id
                     AND s.login_time = sp.login_time
-                LEFT OUTER LOOP JOIN sys.dm_exec_connections AS c ON
-                    c.session_id = sp.session_id
                 LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
                     sp.status NOT IN (''sleeping'', ''dormant'')
                     AND r.session_id = sp.session_id
@@ -2759,7 +2759,18 @@ BEGIN;
                                             WHEN 4 THEN ''Serializable''
                                             WHEN 5 THEN ''Snapshot''
                                         END AS transaction_isolation_level,
-                                        x.encrypt_option,
+                                        (
+                                            SELECT TOP(1)
+                                                c.encrypt_option,
+                                                c.client_net_address,
+                                                c.net_transport
+                                            FROM sys.dm_exec_connections AS c
+                                            WHERE
+                                                c.session_id = x.session_id
+                                            FOR XML
+                                                PATH(''connection_info''),
+                                                TYPE
+                                        ),
                                         x.lock_timeout,
                                         x.deadlock_priority,
                                         x.row_count,
@@ -3108,7 +3119,6 @@ BEGIN;
                         COALESCE(r.ansi_nulls, s.ansi_nulls) AS ansi_nulls,
                         COALESCE(r.concat_null_yields_null, s.concat_null_yields_null) AS concat_null_yields_null,
                         COALESCE(r.transaction_isolation_level, s.transaction_isolation_level) AS transaction_isolation_level,
-                        c.encrypt_option,
                         COALESCE(r.lock_timeout, s.lock_timeout) AS lock_timeout,
                         COALESCE(r.deadlock_priority, s.deadlock_priority) AS deadlock_priority,
                         COALESCE(r.row_count, s.row_count) AS row_count,
