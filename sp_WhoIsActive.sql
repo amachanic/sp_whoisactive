@@ -5379,30 +5379,22 @@ BEGIN;
                 --sql_command
                 CASE @compress
                     WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX),'
-                    ELSE N'('
+                    ELSE N'(('
                 END +
                 CASE @format_output & 3
                     WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')'
                     ELSE N'sql_command'
-                END +
-                CASE @compress
-                    WHEN 1 THEN N')) AS '
-                    ELSE N') AS '
-                END + N'sql_command,
+                END + N')) AS sql_command,
                 ' +
                 --sql_text
                 CASE @compress
                     WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX),'
-                    ELSE N'('
+                    ELSE N'(('
                 END +
                 CASE @format_output & 3
                     WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')'
                     ELSE N'sql_text'
-                END +
-                CASE @compress
-                    WHEN 1 THEN N')) AS '
-                    ELSE N') AS '
-                END + N'sql_text, ' +
+                END + N')) AS sql_text, ' +
                 CASE @compress
                     WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), query_plan)) AS '
                     ELSE N''
