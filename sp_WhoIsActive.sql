@@ -502,7 +502,8 @@ BEGIN;
         RETURN;
     END;
 
-    IF @format_output NOT IN (0, 1, 2, 4, 5, 6)
+    IF @format_output & 3 = 3
+    OR @format_output > 6
     BEGIN;
         RAISERROR('Valid values for @format_output are: 0, 1, 2, 4, 5, or 6', 16, 1);
         RETURN;
