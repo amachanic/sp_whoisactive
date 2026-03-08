@@ -5377,25 +5377,31 @@ BEGIN;
                 REPLACE(@num_col_fmt, '[col_name]', 'open_tran_count') + N'
                 ' +
                 --sql_command
-                CASE
-                    WHEN @compress = 1 AND @format_output & 3 = 0
-                        THEN N'COMPRESS(REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')) AS '
-                    WHEN @compress = 1
-                        THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), sql_command)) AS '
-                    WHEN @format_output & 3 = 0
-                        THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
-                    ELSE N''
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(' +
+                        CASE @format_output & 3
+                            WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')'
+                            ELSE N'CONVERT(NVARCHAR(MAX), sql_command)'
+                        END + N') AS '
+                    ELSE
+                        CASE @format_output & 3
+                            WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
+                            ELSE N''
+                        END
                 END + N'sql_command,
                 ' +
                 --sql_text
-                CASE
-                    WHEN @compress = 1 AND @format_output & 3 = 0
-                        THEN N'COMPRESS(REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')) AS '
-                    WHEN @compress = 1
-                        THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), sql_text)) AS '
-                    WHEN @format_output & 3 = 0
-                        THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
-                    ELSE N''
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(' +
+                        CASE @format_output & 3
+                            WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')'
+                            ELSE N'CONVERT(NVARCHAR(MAX), sql_text)'
+                        END + N') AS '
+                    ELSE
+                        CASE @format_output & 3
+                            WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
+                            ELSE N''
+                        END
                 END + N'sql_text, ' +
                 CASE @compress
                     WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), query_plan)) AS '
