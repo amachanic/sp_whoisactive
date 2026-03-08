@@ -130,9 +130,16 @@ ALTER PROC dbo.sp_WhoIsActive
     @sort_order VARCHAR(500) = '[start_time] ASC',
 
     --Formats some of the output columns in a more "human readable" form
+    --Uses a bitmask: low 2 bits control format mode, bit 2 enables LOB compression
     --0 disables output format
     --1 formats the output for variable-width fonts
     --2 formats the output for fixed-width fonts
+    --4 disables output format + compresses LOB columns with COMPRESS()
+    --5 variable-width fonts + compresses LOB columns with COMPRESS()
+    --6 fixed-width fonts + compresses LOB columns with COMPRESS()
+    --When compression is enabled, query_plan, sql_text, sql_command, locks,
+    --additional_info, and memory_info become varbinary(max) in the output.
+    --Use DECOMPRESS() + CAST to read compressed values.
     @format_output TINYINT = 1,
 
     --If set to a non-blank value, the script will attempt to insert into the specified
