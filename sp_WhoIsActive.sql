@@ -130,9 +130,16 @@ ALTER PROC dbo.sp_WhoIsActive
     @sort_order VARCHAR(500) = '[start_time] ASC',
 
     --Formats some of the output columns in a more "human readable" form
-    --0 disables outfput format
+    --Uses a bitmask: low 2 bits control format mode, bit 2 enables LOB compression
+    --0 disables output format
     --1 formats the output for variable-width fonts
     --2 formats the output for fixed-width fonts
+    --4 disables output format + compresses LOB columns with COMPRESS()
+    --5 variable-width fonts + compresses LOB columns with COMPRESS()
+    --6 fixed-width fonts + compresses LOB columns with COMPRESS()
+    --When compression is enabled, query_plan, sql_text, sql_command, locks,
+    --additional_info, and memory_info become varbinary(max) in the output.
+    --Use DECOMPRESS() + CAST to read compressed values.
     @format_output TINYINT = 1,
 
     --If set to a non-blank value, the script will attempt to insert into the specified
@@ -495,9 +502,10 @@ BEGIN;
         RETURN;
     END;
 
-    IF @format_output NOT IN (0, 1, 2)
+    IF @format_output & 3 = 3
+    OR @format_output > 6
     BEGIN;
-        RAISERROR('Valid values for @format_output are: 0, 1, or 2', 16, 1);
+        RAISERROR('Valid values for @format_output are: 0, 1, 2, 4, 5, or 6', 16, 1);
         RETURN;
     END;
 
@@ -920,16 +928,16 @@ BEGIN;
             UNION ALL
             SELECT '[dd hh:mm:ss.mss]', 2
             WHERE
-                @format_output IN (1, 2)
+                @format_output & 3 IN (1, 2)
             UNION ALL
             SELECT '[dd hh:mm:ss.mss (avg)]', 3
             WHERE
-                @format_output IN (1, 2)
+                @format_output & 3 IN (1, 2)
                 AND @get_avg_time = 1
             UNION ALL
             SELECT '[avg_elapsed_time]', 4
             WHERE
-                @format_output = 0
+                @format_output & 3 = 0
                 AND @get_avg_time = 1
             UNION ALL
             SELECT '[physical_io]', 5
@@ -5148,11 +5156,13 @@ BEGIN;
     DECLARE
         @num_data_threshold MONEY,
         @num_col_fmt NVARCHAR(MAX),
-        @num_delta_col_fmt NVARCHAR(MAX);
+        @num_delta_col_fmt NVARCHAR(MAX),
+        @compress BIT;
 
+    SET @compress = CASE WHEN @format_output & 4 = 4 THEN 1 ELSE 0 END;
     SET @num_data_threshold = 919919919919919;
     SET @num_col_fmt =
-        CASE @format_output
+        CASE @format_output & 3
             WHEN 1 THEN N'
                 CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) AS '
             WHEN 2 THEN N'
@@ -5167,7 +5177,7 @@ BEGIN;
                 AND num_events = 2
                 AND [col_name] >= 0
                     THEN ' +
-                    CASE @format_output
+                    CASE @format_output & 3
                         WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, [col_name]))) OVER() - LEN(CONVERT(VARCHAR, [col_name]))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
                         WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN [col_name] > @num_data_threshold THEN @num_data_threshold ELSE [col_name] END), 1), 19)) '
                         ELSE N'[col_name] '
@@ -5200,7 +5210,7 @@ BEGIN;
                 session_id, ' +
                 --[dd hh:mm:ss.mss]
                 CASE
-                    WHEN @format_output IN (1, 2) THEN
+                    WHEN @format_output & 3 IN (1, 2) THEN
                         N'
                         CASE
                             WHEN elapsed_time < 0 THEN
@@ -5234,7 +5244,7 @@ BEGIN;
                 END +
                 --[dd hh:mm:ss.mss (avg)] / avg_elapsed_time
                 CASE
-                    WHEN  @format_output IN (1, 2) THEN
+                    WHEN  @format_output & 3 IN (1, 2) THEN
                         N'
                         RIGHT
                         (
@@ -5281,34 +5291,54 @@ BEGIN;
                 ' +
                 REPLACE(@num_col_fmt, N'[col_name]', N'tasks') + N'
                 status,
-                wait_info,
-                locks,
+                wait_info, ' +
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), locks)) AS '
+                    ELSE N''
+                END + N'locks,
                 tran_start_time,
                 LEFT(tran_log_writes, LEN(tran_log_writes) - 1) AS tran_log_writes,
                 implicit_tran, ' +
                 REPLACE(@num_col_fmt, '[col_name]', 'open_tran_count') + N'
                 ' +
                 --sql_command
-                CASE @format_output
-                    WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
-                    ELSE N''
-                END + N'sql_command,
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX),'
+                    ELSE N'(('
+                END +
+                CASE @format_output & 3
+                    WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_command), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')'
+                    ELSE N'sql_command'
+                END + N')) AS sql_command,
                 ' +
                 --sql_text
-                CASE @format_output
-                    WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''') AS '
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX),'
+                    ELSE N'(('
+                END +
+                CASE @format_output & 3
+                    WHEN 0 THEN N'REPLACE(REPLACE(CONVERT(NVARCHAR(MAX), sql_text), ''<?query --''+CHAR(13)+CHAR(10), ''''), CHAR(13)+CHAR(10)+''--?>'', '''')'
+                    ELSE N'sql_text'
+                END + N')) AS sql_text, ' +
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), query_plan)) AS '
                     ELSE N''
-                END + N'sql_text,
-                query_plan,
+                END + N'query_plan,
                 blocking_session_id, ' +
                 REPLACE(@num_col_fmt, N'[col_name]', N'blocked_session_count') +
                 REPLACE(@num_col_fmt, N'[col_name]', N'percent_complete') + N'
                 host_name,
                 login_name,
                 database_name,
-                program_name,
-                additional_info,
-                memory_info,
+                program_name, ' +
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), additional_info)) AS '
+                    ELSE N''
+                END + N'additional_info, ' +
+                CASE @compress
+                    WHEN 1 THEN N'COMPRESS(CONVERT(NVARCHAR(MAX), memory_info)) AS '
+                    ELSE N''
+                END + N'memory_info,
                 start_time,
                 login_time,
                 CASE
