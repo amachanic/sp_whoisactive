@@ -81,6 +81,8 @@ ALTER PROC dbo.sp_WhoIsActive
     --ansi_defaults, ansi_warnings, ansi_padding, ansi_nulls, concat_null_yields_null,
     --transaction_isolation_level, lock_timeout, deadlock_priority, row_count, command_type
     --
+    --A subnode called connection_info will be populated with: encrypt_option, client_net_address, net_transport
+    --
     --If a SQL Agent job is running, an subnode called agent_info will be populated with some or all of
     --the following: job_id, job_name, step_id, step_name, msdb_query_error (in the event of an error)
     --The resolved job name will also be shown in the top-level [program_name] column
@@ -2757,6 +2759,18 @@ BEGIN;
                                             WHEN 4 THEN ''Serializable''
                                             WHEN 5 THEN ''Snapshot''
                                         END AS transaction_isolation_level,
+                                        (
+                                            SELECT TOP(1)
+                                                c.encrypt_option,
+                                                c.client_net_address,
+                                                c.net_transport
+                                            FROM sys.dm_exec_connections AS c
+                                            WHERE
+                                                c.session_id = x.session_id
+                                            FOR XML
+                                                PATH(''connection_info''),
+                                                TYPE
+                                        ),
                                         x.lock_timeout,
                                         x.deadlock_priority,
                                         x.row_count,
