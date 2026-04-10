@@ -3979,6 +3979,33 @@ BEGIN;
             @start_time DATETIME,
             @database_name sysname;
 
+        --Variables for API cursor enrichment
+        DECLARE @cursor_fetch_sql NVARCHAR(MAX) =
+            CASE
+                WHEN OBJECT_ID('sys.dm_exec_cursors') IS NOT NULL THEN N'
+                    SELECT TOP(1)
+                        @out_handle = c.sql_handle,
+                        @out_plan_generation_num = c.plan_generation_num
+                    FROM sys.dm_exec_cursors(@in_session_id) AS c
+                    WHERE
+                        c.is_open = 1
+                        AND c.properties LIKE ''API%''
+                    ORDER BY
+                        c.cursor_id DESC'
+                WHEN OBJECT_ID('sys.dm_db_exec_cursors') IS NOT NULL THEN N'
+                    SELECT TOP(1)
+                        @out_handle = c.sql_handle,
+                        @out_plan_generation_num = c.plan_generation_num
+                    FROM sys.dm_db_exec_cursors(@in_session_id) AS c
+                    WHERE
+                        c.is_open = 1
+                        AND c.properties LIKE ''API%''
+                    ORDER BY
+                        c.cursor_id DESC'
+            END,
+            @cursor_sql_handle VARBINARY(64),
+            @cursor_plan_generation_num INT;
+
         IF
             @recursion = 1
             AND @output_column_list LIKE '%|[sql_text|]%' ESCAPE '|'
@@ -4013,6 +4040,74 @@ BEGIN;
 
             WHILE @@FETCH_STATUS = 0
             BEGIN;
+                --Detect API cursor and swap to actual cursor query handles
+                IF @cursor_fetch_sql IS NOT NULL
+                BEGIN;
+                    BEGIN TRY;
+                        IF
+                        (
+                            SELECT TOP(1)
+                                est.text
+                            FROM sys.dm_exec_sql_text(@sql_handle) AS est
+                        ) LIKE N'FETCH API_CURSOR%'
+                        BEGIN;
+                            SET @cursor_sql_handle = NULL;
+                            SET @cursor_plan_generation_num = NULL;
+
+                            EXEC sp_executesql
+                                @cursor_fetch_sql,
+                                N'@in_session_id SMALLINT, @out_handle VARBINARY(64) OUTPUT, @out_plan_generation_num INT OUTPUT',
+                                @session_id, @cursor_sql_handle OUTPUT, @cursor_plan_generation_num OUTPUT;
+
+                            IF @cursor_sql_handle IS NOT NULL
+                            BEGIN;
+                                SET @sql_handle = @cursor_sql_handle;
+
+                                --Update plan handle and offsets for the plan cursor
+                                UPDATE s
+                                SET
+                                    s.sql_handle = @sql_handle,
+                                    s.plan_handle = COALESCE(qs.plan_handle, s.plan_handle),
+                                    s.statement_start_offset = COALESCE(qs.statement_start_offset, s.statement_start_offset),
+                                    s.statement_end_offset = COALESCE(qs.statement_end_offset, s.statement_end_offset)
+                                FROM #sessions AS s
+                                OUTER APPLY
+                                (
+                                    SELECT TOP(1)
+                                        qs0.plan_handle,
+                                        qs0.statement_start_offset,
+                                        qs0.statement_end_offset
+                                    FROM sys.dm_exec_query_stats AS qs0
+                                    WHERE
+                                        qs0.sql_handle = @sql_handle
+                                        AND qs0.plan_generation_num = ISNULL(@cursor_plan_generation_num, qs0.plan_generation_num)
+                                    ORDER BY
+                                        qs0.creation_time DESC
+                                ) AS qs
+                                WHERE
+                                    s.session_id = @session_id
+                                    AND s.request_id = @request_id
+                                    AND s.recursion = 1
+                                OPTION (KEEPFIXED PLAN);
+
+                                --Update local offsets for text extraction
+                                SELECT TOP(1)
+                                    @statement_start_offset = qs.statement_start_offset,
+                                    @statement_end_offset = qs.statement_end_offset
+                                FROM sys.dm_exec_query_stats AS qs
+                                WHERE
+                                    qs.sql_handle = @sql_handle
+                                    AND qs.plan_generation_num = ISNULL(@cursor_plan_generation_num, qs.plan_generation_num)
+                                ORDER BY
+                                    qs.creation_time DESC;
+                            END;
+                        END;
+                    END TRY
+                    BEGIN CATCH;
+                        SET @cursor_sql_handle = NULL;
+                    END CATCH;
+                END;
+
                 BEGIN TRY;
                     UPDATE s
                     SET
