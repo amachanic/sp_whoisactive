@@ -1,0 +1,35 @@
+# sp_whoisactive Documentation
+
+[Home](https://github.com/amachanic/sp_whoisactive)	[Download](https://github.com/amachanic/sp_whoisactive/archive/master.zip)
+------
+
+The sp_whoisactive documentation consists of the following articles. Please note that these articles were migrated from blog posts and are still being edited. Please excuse the occasional contextual oddity.
+
+1. [A Brief History of Activity Monitoring](01_background.md)
+2. [Design Philosophy](02_design.md)
+3. [The License](03_license.md)
+4. [Installing sp_whoisactive](04_installation.md)
+5. [Less Data is More Data](05_lessdata.md)
+6. [Options](06_options.md)
+7. [Default Columns](07_default.md)
+8. [Active Request, Sleeping Session](08_requests.md)
+9. [Deciding What (Not) To See](09_deciding.md)
+10. [Commands, Batches, and the Mysteries of Text](10_commands.md)
+11. ["Planning" for Success](11_planning.md)
+12. [The Almighty Transaction](12_transaction.md)
+13. [How Queries Are Processed](13_queries.md)
+14. [Blocking, Blockers, and Other B Words](14_blockers.md)
+15. [Seeing the Wait That Matters Most](15_waits.md)
+16. [Seeing All of the Waits](16_morewaits.md)
+17. [Is This Normal?](17_normal.md)
+18. [Getting More Information](18_moreinfo.md)
+19. [Why Am I Blocked?](19_whyblocked.md)
+20. [The Node Knows](20_node.md)
+21. [Analyzing Tempdb Contention](21_tempdb.md)
+22. [The Key to Your Locks](22_locks.md)
+23. [Leader of the Block](23_leader.md)
+24. [The Output of Your Dreams](24_output.md)
+25. [Capturing the Output](25_capturing.md)
+26. [Delta Force](26_delta.md)
+27. [Who is Active's Hidden Gems](27_gems.md)
+28. [Access for All!](28_access.md)
