@@ -2312,7 +2312,33 @@ BEGIN;
                         FROM @sessions
                         WHERE
                             NULLIF(blocked, 0) IS NOT NULL
+                        ' +
+                        --When @find_block_leaders = 1, also walk downstream:
+                        --pull in any session that is blocked by something already in @sessions.
+                        --Combined with a session filter, this turns the proc into a
+                        --"show this leader plus its victim chain" view (issue #164).
+                        CASE
+                            WHEN @find_block_leaders = 1 THEN
+                                '
+                        UNION
 
+                        SELECT TOP(@i)
+                            sp.spid
+                        FROM sys.sysprocesses AS sp
+                        WHERE
+                            sp.blocked <> 0
+                            AND sp.blocked <> sp.spid
+                            AND EXISTS
+                            (
+                                SELECT 1/0
+                                FROM @sessions AS s
+                                WHERE s.session_id = sp.blocked
+                            )
+                        '
+                            ELSE
+                                ''
+                        END +
+                        '
                         EXCEPT
 
                         SELECT TOP(@i)
