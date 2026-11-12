@@ -2001,7 +2001,12 @@ BEGIN;
                         sp0.request_id,
                         sp0.login_time,
                         sp0.last_request_end_time,
-                        LOWER(sp0.status) AS status,
+                        CASE
+                            WHEN sp0.cmd = ''KILLED/ROLLBACK'' THEN
+                                ''KILLED/ROLLBACK''
+                            ELSE
+                                LOWER(sp0.status)
+                        END AS status,
                         CASE
                             WHEN sp0.cmd = ''CREATE INDEX'' THEN
                                 0
