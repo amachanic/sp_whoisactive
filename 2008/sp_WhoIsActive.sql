@@ -85,8 +85,11 @@ ALTER PROC dbo.sp_WhoIsActive
     --ansi_defaults, ansi_warnings, ansi_padding, ansi_nulls, concat_null_yields_null,
     --transaction_isolation_level, lock_timeout, deadlock_priority, row_count, command_type
     --
+    --A subnode called connection_info will be populated with: encrypt_option, client_net_address, net_transport
+    --
     --If a SQL Agent job is running, an subnode called agent_info will be populated with some or all of
     --the following: job_id, job_name, step_id, step_name, msdb_query_error (in the event of an error)
+    --The resolved job name will also be shown in the top-level [program_name] column
     --
     --If @get_task_info is set to 2 and a lock wait is detected, a subnode called block_info will be
     --populated with some or all of the following: lock_type, database_name, object_id, file_id, hobt_id,
@@ -133,7 +136,7 @@ ALTER PROC dbo.sp_WhoIsActive
     @sort_order VARCHAR(500) = '[start_time] ASC',
 
     --Formats some of the output columns in a more "human readable" form
-    --0 disables outfput format
+    --0 disables output format
     --1 formats the output for variable-width fonts
     --2 formats the output for fixed-width fonts
     @format_output TINYINT = 1,
@@ -387,6 +390,8 @@ Formatted/Non:    [database_name] [sysname] NULL
 
 Formatted/Non:    [program_name] [sysname] NULL
     Shows the reported program/application name
+    When @get_additional_info is enabled and a SQL Agent job is detected, the hex job_id
+    is resolved to: SQLAgent - <job_name> (Step N: <step_name>)
 
 Formatted/Non:    [additional_info] [xml] NULL
     (Requires @get_additional_info option)
@@ -453,37 +458,37 @@ BEGIN;
         RAISERROR('Input parameters cannot be NULL', 16, 1);
         RETURN;
     END;
-   
+
     IF @filter_type NOT IN ('session', 'program', 'database', 'login', 'host')
     BEGIN;
         RAISERROR('Valid filter types are: session, program, database, login, host', 16, 1);
         RETURN;
     END;
-   
+
     IF @filter_type = 'session' AND @filter LIKE '%[^0123456789]%'
     BEGIN;
         RAISERROR('Session filters must be valid integers', 16, 1);
         RETURN;
     END;
-   
+
     IF @not_filter_type NOT IN ('session', 'program', 'database', 'login', 'host')
     BEGIN;
         RAISERROR('Valid filter types are: session, program, database, login, host', 16, 1);
         RETURN;
     END;
-   
+
     IF @not_filter_type = 'session' AND @not_filter LIKE '%[^0123456789]%'
     BEGIN;
         RAISERROR('Session filters must be valid integers', 16, 1);
         RETURN;
     END;
-   
+
     IF @show_sleeping_spids NOT IN (0, 1, 2)
     BEGIN;
         RAISERROR('Valid values for @show_sleeping_spids are: 0, 1, or 2', 16, 1);
         RETURN;
     END;
-   
+
     IF @get_plans NOT IN (0, 1, 2)
     BEGIN;
         RAISERROR('Valid values for @get_plans are: 0, 1, or 2', 16, 1);
@@ -721,7 +726,7 @@ BEGIN;
         ORDER BY
             param_group,
             group_order;
-       
+
         WITH
         a0 AS
         (SELECT 1 AS n UNION ALL SELECT 1),
@@ -969,7 +974,7 @@ BEGIN;
             UNION ALL
             SELECT '[physical_io_delta]', 17
             WHERE
-                @delta_interval > 0   
+                @delta_interval > 0
                 AND @get_task_info = 2
             UNION ALL
             SELECT '[reads_delta]', 18
@@ -1105,13 +1110,13 @@ BEGIN;
                 1,
                 ''
             );
-   
+
     IF COALESCE(RTRIM(@output_column_list), '') = ''
     BEGIN;
         RAISERROR('No valid column matches found in @output_column_list or no columns remain due to selected options.', 16, 1);
         RETURN;
     END;
-   
+
     IF @destination_table <> ''
     BEGIN;
         SET @destination_table =
@@ -1121,7 +1126,7 @@ BEGIN;
             COALESCE(QUOTENAME(PARSENAME(@destination_table, 2)) + '.', '') +
             --table
             COALESCE(QUOTENAME(PARSENAME(@destination_table, 1)), '');
-           
+
         IF COALESCE(RTRIM(@destination_table), '') = ''
         BEGIN;
             RAISERROR('Destination table not properly formatted.', 16, 1);
@@ -1303,7 +1308,6 @@ BEGIN;
         tempdb_allocations BIGINT NULL,
         tempdb_current BIGINT NULL,
         CPU BIGINT NULL,
-        thread_CPU_snapshot BIGINT NULL,
         context_switches BIGINT NULL,
         used_memory BIGINT NOT NULL,
         max_used_memory BIGINT NULL,
@@ -1375,7 +1379,7 @@ BEGIN;
 
         --Used for the delta pull
         REDO:;
-       
+
         IF
             @get_locks = 1
             AND @recursion = 1
@@ -1800,7 +1804,7 @@ BEGIN;
             CREATE STATISTICS s_principal_name ON #locks (principal_name)
             WITH SAMPLE 0 ROWS, NORECOMPUTE;
         END;
-       
+
         DECLARE
             @sql VARCHAR(MAX),
             @sql_n NVARCHAR(MAX),
@@ -2141,7 +2145,12 @@ BEGIN;
                                     CONVERT(INT, NULL) AS database_id
                                 WHERE
                                     @blocker = 0
-
+                            ' +
+                            CASE
+                                WHEN
+                                    ISNULL(HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER STATE'), 0) = 1
+                                    OR ISNULL(HAS_PERMS_BY_NAME(NULL, NULL, 'VIEW SERVER PERFORMANCE STATE'), 0) = 1
+                                THEN '
                                 UNION ALL
 
                                 SELECT TOP(@i)
@@ -2151,6 +2160,10 @@ BEGIN;
                                 FROM sys.dm_broker_activated_tasks
                                 WHERE
                                     @blocker = 0
+                                '
+                                ELSE
+                                    ''
+                            END + '
                             ) AS blk
                             INNER JOIN sys.sysprocesses AS sp2 ON
                                 sp2.spid = blk.session_id
@@ -2451,18 +2464,6 @@ BEGIN;
                     ' +
                 CASE
                     WHEN
-                        @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-                        AND @get_task_info = 2
-                        AND @sys_info = 1
-                            THEN
-                                'x.thread_CPU_snapshot '
-                    ELSE
-                        '0 '
-                END +
-                    'AS thread_CPU_snapshot,
-                    ' +
-                CASE
-                    WHEN
                         @output_column_list LIKE '%|[context_switches|]%' ESCAPE '|'
                         OR @output_column_list LIKE '%|[context_switches_delta|]%' ESCAPE '|'
                             THEN
@@ -2754,6 +2755,18 @@ BEGIN;
                                             WHEN 4 THEN ''Serializable''
                                             WHEN 5 THEN ''Snapshot''
                                         END AS transaction_isolation_level,
+                                        (
+                                            SELECT TOP(1)
+                                                c.encrypt_option,
+                                                c.client_net_address,
+                                                c.net_transport
+                                            FROM sys.dm_exec_connections AS c
+                                            WHERE
+                                                c.session_id = x.session_id
+                                            FOR XML
+                                                PATH(''connection_info''),
+                                                TYPE
+                                        ),
                                         x.lock_timeout,
                                         x.deadlock_priority,
                                         x.row_count,
@@ -2776,21 +2789,7 @@ BEGIN;
                                                 '(
                                                     SELECT TOP(1)
                                                         CONVERT(uniqueidentifier, CONVERT(XML, '''').value(''xs:hexBinary( substring(sql:column("agent_info.job_id_string"), 0) )'', ''binary(16)'')) AS job_id,
-                                                        agent_info.step_id,
-                                                        (
-                                                            SELECT TOP(1)
-                                                                NULL
-                                                            FOR XML
-                                                                PATH(''job_name''),
-                                                                TYPE
-                                                        ),
-                                                        (
-                                                            SELECT TOP(1)
-                                                                NULL
-                                                            FOR XML
-                                                                PATH(''step_name''),
-                                                                TYPE
-                                                        )
+                                                        agent_info.step_id
                                                     FROM
                                                     (
                                                         SELECT TOP(1)
@@ -2839,21 +2838,21 @@ BEGIN;
                         (
                             SELECT TOP(@i)
                             (
-                                SELECT TOP(@i)   
+                                SELECT TOP(@i)
                                     x.request_time,
                                     x.grant_time,
                                     x.wait_time_ms,
-                                    x.requested_memory_kb,   
+                                    x.requested_memory_kb,
                                     x.mg_granted_memory_kb AS granted_memory_kb,
                                     x.mg_used_memory_kb AS used_memory_kb,
                                     x.max_used_memory_kb,
-                                    x.ideal_memory_kb,   
+                                    x.ideal_memory_kb,
                                     x.required_memory_kb,
                                     x.queue_id,
                                     x.wait_order,
                                     x.is_next_candidate,
                                     x.dop,
-                                    CAST(x.query_cost AS NUMERIC(38, 4)) AS query_cost
+                                    CAST(x.query_cost AS DECIMAL(38, 0)) AS query_cost
                                 FOR XML
                                     PATH(''memory_grant''),
                                     TYPE
@@ -2874,7 +2873,7 @@ BEGIN;
                                     TYPE
                             ),
                             (
-                                SELECT TOP(@i)   
+                                SELECT TOP(@i)
                                     x.wg_name AS name,
                                     x.request_max_memory_grant_percent,
                                     x.request_max_cpu_time_sec,
@@ -2885,7 +2884,7 @@ BEGIN;
                                     TYPE
                             ),
                             (
-                                SELECT TOP(@i)   
+                                SELECT TOP(@i)
                                     x.rp_name AS name,
                                     x.min_memory_percent,
                                     x.max_memory_percent,
@@ -2900,7 +2899,7 @@ BEGIN;
                             FOR XML
                                 PATH(''memory_info''),
                                 TYPE
-                        )               
+                        )
                     '
                     ELSE
                         'NULL '
@@ -3016,7 +3015,6 @@ BEGIN;
                                 tasks.tasks,
                                 tasks.block_info,
                                 tasks.wait_info AS task_wait_info,
-                                tasks.thread_CPU_snapshot,
                                 '
                             ELSE
                                 ''
@@ -3225,8 +3223,7 @@ BEGIN;
                                 task_nodes.task_node.value(''(context_switches/text())[1]'', ''BIGINT'') AS context_switches,
                                 task_nodes.task_node.value(''(tasks/text())[1]'', ''INT'') AS tasks,
                                 task_nodes.task_node.value(''(block_info/text())[1]'', ''NVARCHAR(4000)'') AS block_info,
-                                task_nodes.task_node.value(''(waits/text())[1]'', ''NVARCHAR(4000)'') AS wait_info,
-                                task_nodes.task_node.value(''(thread_CPU_snapshot/text())[1]'', ''BIGINT'') AS thread_CPU_snapshot
+                                task_nodes.task_node.value(''(waits/text())[1]'', ''NVARCHAR(4000)'') AS wait_info
                             FROM
                             (
                                 SELECT TOP(@i)
@@ -3267,12 +3264,6 @@ BEGIN;
                                             ELSE
                                                 NULL
                                         END AS [context_switches],
-                                        CASE waits.r
-                                            WHEN 1 THEN
-                                                waits.thread_CPU_snapshot
-                                            ELSE
-                                                NULL
-                                        END AS [thread_CPU_snapshot],
                                         CASE waits.r
                                             WHEN 1 THEN
                                                 waits.tasks
@@ -3342,7 +3333,6 @@ BEGIN;
                                                 task_info.request_id,
                                                 task_info.physical_io,
                                                 task_info.context_switches,
-                                                task_info.thread_CPU_snapshot,
                                                 task_info.num_tasks AS tasks,
                                                 CASE
                                                     WHEN task_info.runnable_time IS NOT NULL THEN
@@ -3362,17 +3352,6 @@ BEGIN;
                                                     t.request_id,
                                                     SUM(CONVERT(BIGINT, t.pending_io_count)) OVER (PARTITION BY t.session_id, t.request_id) AS physical_io,
                                                     SUM(CONVERT(BIGINT, t.context_switches_count)) OVER (PARTITION BY t.session_id, t.request_id) AS context_switches,
-                                                    ' +
-                                                    CASE
-                                                        WHEN
-                                                            @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-                                                            AND @sys_info = 1
-                                                            THEN
-                                                                'SUM(tr.usermode_time + tr.kernel_time) OVER (PARTITION BY t.session_id, t.request_id) '
-                                                        ELSE
-                                                            'CONVERT(BIGINT, NULL) '
-                                                    END +
-                                                        ' AS thread_CPU_snapshot,
                                                     COUNT(*) OVER (PARTITION BY t.session_id, t.request_id) AS num_tasks,
                                                     t.task_address,
                                                     t.task_state,
@@ -3427,18 +3406,6 @@ BEGIN;
                                                 ) AS w ON
                                                     w.worker_address = t.worker_address
                                                 ' +
-                                                CASE
-                                                    WHEN
-                                                        @output_column_list LIKE '%|[CPU_delta|]%' ESCAPE '|'
-                                                        AND @sys_info = 1
-                                                        THEN
-                                                            'LEFT OUTER HASH JOIN sys.dm_os_threads AS tr ON
-                                                                tr.thread_address = w.thread_address
-                                                                AND @first_collection_ms_ticks >= w.task_bound_ms_ticks
-                                                            '
-                                                    ELSE
-                                                        ''
-                                                END +
                                             ') AS task_info
                                             LEFT OUTER HASH JOIN
                                             (
@@ -3626,7 +3593,6 @@ BEGIN;
                                                 task_info.request_id,
                                                 task_info.physical_io,
                                                 task_info.context_switches,
-                                                task_info.thread_CPU_snapshot,
                                                 task_info.num_tasks,
                                                 CASE
                                                     WHEN task_info.runnable_time IS NOT NULL THEN
@@ -3769,7 +3735,6 @@ BEGIN;
             tempdb_allocations,
             tempdb_current,
             CPU,
-            thread_CPU_snapshot,
             context_switches,
             used_memory,
             max_used_memory,
@@ -3782,7 +3747,7 @@ BEGIN;
             open_tran_count,
             sql_handle,
             statement_start_offset,
-            statement_end_offset,       
+            statement_end_offset,
             sql_text,
             plan_handle,
             blocking_session_id,
@@ -3811,7 +3776,7 @@ BEGIN;
                 OR @output_column_list LIKE '%|[tran_log_writes|]%' ESCAPE '|'
                 OR @output_column_list LIKE '%|[implicit_tran|]%' ESCAPE '|'
             )
-        BEGIN;   
+        BEGIN;
             DECLARE @i INT;
             SET @i = 2147483647;
 
@@ -3964,9 +3929,9 @@ BEGIN;
                                         WHERE
                                             s1.transaction_id = s_tran.transaction_id
                                             AND s1.recursion = 1
-                                           
+
                                         UNION ALL
-                                   
+
                                         SELECT TOP(1)
                                             s2.session_id,
                                             s2.request_id
@@ -3998,7 +3963,7 @@ BEGIN;
         END;
 
         --Variables for text and plan collection
-        DECLARE   
+        DECLARE
             @session_id SMALLINT,
             @request_id INT,
             @sql_handle VARBINARY(64),
@@ -4110,9 +4075,9 @@ BEGIN;
                                     text,
                                     0 AS row_num
                                 FROM sys.dm_exec_sql_text(@sql_handle)
-                               
+
                                 UNION ALL
-                               
+
                                 SELECT
                                     NULL,
                                     1 AS row_num
@@ -4840,7 +4805,7 @@ BEGIN;
             WITH SAMPLE 0 ROWS, NORECOMPUTE;
             CREATE STATISTICS s_query_error ON #blocked_requests (query_error)
             WITH SAMPLE 0 ROWS, NORECOMPUTE;
-       
+
             INSERT #blocked_requests
             (
                 session_id,
@@ -4879,20 +4844,20 @@ BEGIN;
                     OR t.hobt_id IS NOT NULL
                     OR t.schema_node IS NOT NULL
                 );
-           
+
             DECLARE blocks_cursor
             CURSOR LOCAL FAST_FORWARD
             FOR
                 SELECT DISTINCT
                     database_name
                 FROM #blocked_requests;
-               
+
             OPEN blocks_cursor;
-           
+
             FETCH NEXT FROM blocks_cursor
             INTO
                 @database_name;
-           
+
             WHILE @@FETCH_STATUS = 0
             BEGIN;
                 BEGIN TRY;
@@ -4935,7 +4900,7 @@ BEGIN;
                             s.schema_id = COALESCE(o.schema_id, b.schema_id)
                         WHERE
                             b.database_name = @database_name; ';
-                   
+
                     EXEC sp_executesql
                         @sql_n,
                         N'@database_name sysname',
@@ -4969,10 +4934,10 @@ BEGIN;
                 INTO
                     @database_name;
             END;
-           
+
             CLOSE blocks_cursor;
             DEALLOCATE blocks_cursor;
-           
+
             UPDATE s
             SET
                 additional_info.modify
@@ -5073,24 +5038,49 @@ BEGIN;
                     BEGIN;
                         UPDATE s
                         SET
-                            additional_info.modify
-                            (''
-                                insert text{sql:variable("@job_name")}
-                                into (/additional_info/agent_job_info/job_name)[1]
-                            '')
-                        FROM #sessions AS s
-                        WHERE
-                            s.session_id = @session_id
-                            AND s.recursion = 1
-                        OPTION (KEEPFIXED PLAN);
-                       
-                        UPDATE s
-                        SET
-                            additional_info.modify
-                            (''
-                                insert text{sql:variable("@step_name")}
-                                into (/additional_info/agent_job_info/step_name)[1]
-                            '')
+                            s.additional_info = 
+                                CONVERT(
+                                    XML, 
+                                    ''<additional_info>'' +
+                                        REPLACE(REPLACE(
+                                            CONVERT(
+                                                NVARCHAR(MAX),
+                                                (
+                                                    SELECT
+                                                        y.n
+                                                    FROM
+                                                    (
+                                                        SELECT
+                                                            c.query(''.'') AS n
+                                                        FROM s.additional_info.nodes(''/additional_info/*'') AS n (c)
+                                                        WHERE
+                                                            c.value(''local-name(.)'', ''NVARCHAR(50)'') <> ''agent_job_info''
+
+                                                        UNION ALL
+
+                                                        SELECT
+                                                            (
+                                                                SELECT
+                                                                    @job_id AS job_id,
+                                                                    @step_id AS step_id,
+                                                                    @job_name AS job_name,
+                                                                    @step_name AS step_name
+                                                                FOR XML PATH(''''), ROOT(''agent_job_info''), TYPE
+                                                            )
+                                                    ) AS y
+                                                    FOR XML PATH(''''), TYPE
+                                                )
+                                            ),''<n>'',''''),''</n>'','''')
+                                        + ''</additional_info>''
+                                ),
+                            s.program_name =
+                                CONVERT
+                                (
+                                    sysname,
+                                    N''SQLAgent - '' + @job_name +
+                                    N'' (Step '' + CONVERT(NVARCHAR(10), @step_id) +
+                                    COALESCE(N'': '' + @step_name, N'''') + N'')'' 
+                                )
                         FROM #sessions AS s
                         WHERE
                             s.session_id = @session_id
@@ -5101,7 +5091,7 @@ BEGIN;
                 BEGIN CATCH;
                     DECLARE @msdb_error_message NVARCHAR(256);
                     SET @msdb_error_message = ERROR_MESSAGE();
-               
+
                     UPDATE s
                     SET
                         additional_info.modify
@@ -5132,7 +5122,7 @@ BEGIN;
                 WHERE
                     s.recursion = 1
             OPTION (KEEPFIXED PLAN);
-           
+
             OPEN agent_cursor;
 
             FETCH NEXT FROM agent_cursor
@@ -5158,7 +5148,7 @@ BEGIN;
             CLOSE agent_cursor;
             DEALLOCATE agent_cursor;
         END;
-       
+
         IF
             @delta_interval > 0
             AND @recursion <> 1
@@ -5300,35 +5290,7 @@ BEGIN;
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'tempdb_allocations_delta') +
                         --this is the only one that can (legitimately) go negative
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'tempdb_current_delta') +
-                        --CPU_delta
-                        --leaving this one hardcoded, as there is a bit of different interaction here
-                        N'
-                        CASE
-                            WHEN
-                                first_request_start_time = last_request_start_time
-                                AND num_events = 2
-                                    THEN
-                                        CASE
-                                            WHEN
-                                                thread_CPU_delta > CPU_delta
-                                                AND thread_CPU_delta > 0
-                                                    THEN ' +
-                                                        CASE @format_output
-                                                            WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, thread_CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
-                                                            WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN thread_CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE thread_CPU_delta END), 1), 19)) '
-                                                            ELSE N'thread_CPU_delta '
-                                                        END + N'
-                                            WHEN CPU_delta >= 0 THEN ' +
-                                                CASE @format_output
-                                                    WHEN 1 THEN N'CONVERT(VARCHAR, SPACE(MAX(LEN(CONVERT(VARCHAR, thread_CPU_delta + CPU_delta))) OVER() - LEN(CONVERT(VARCHAR, CPU_delta))) + LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
-                                                    WHEN 2 THEN N'CONVERT(VARCHAR, LEFT(CONVERT(CHAR(22), CONVERT(MONEY, CASE WHEN CPU_delta > @num_data_threshold THEN @num_data_threshold ELSE CPU_delta END), 1), 19)) '
-                                                    ELSE N'CPU_delta '
-                                                END + N'
-                                            ELSE NULL
-                                        END
-                            ELSE
-                                NULL
-                        END AS CPU_delta, ' +
+                        REPLACE(@num_delta_col_fmt, N'[col_name]', N'CPU_delta') +
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'context_switches_delta') +
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'used_memory_delta') +
                         REPLACE(@num_delta_col_fmt, N'[col_name]', N'max_used_memory_delta')
@@ -5433,8 +5395,6 @@ BEGIN;
                                 MIN(tempdb_current * recursion) OVER (PARTITION BY session_id, request_id) AS tempdb_current_delta,
                             MAX(CPU * recursion) OVER (PARTITION BY session_id, request_id) +
                                 MIN(CPU * recursion) OVER (PARTITION BY session_id, request_id) AS CPU_delta,
-                            MAX(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) +
-                                MIN(thread_CPU_snapshot * recursion) OVER (PARTITION BY session_id, request_id) AS thread_CPU_delta,
                             MAX(context_switches * recursion) OVER (PARTITION BY session_id, request_id) +
                                 MIN(context_switches * recursion) OVER (PARTITION BY session_id, request_id) AS context_switches_delta,
                             MAX(used_memory * recursion) OVER (PARTITION BY session_id, request_id) +
