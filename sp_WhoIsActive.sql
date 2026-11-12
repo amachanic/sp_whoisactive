@@ -1820,7 +1820,7 @@ BEGIN;
                 '@sessions AS sp
                 LEFT OUTER LOOP JOIN sys.dm_exec_sessions AS s ON
                     s.session_id = sp.session_id
-                    AND s.login_time = sp.login_time
+                    AND s.login_time <= sp.login_time
                 LEFT OUTER LOOP JOIN sys.dm_exec_requests AS r ON
                     sp.status NOT IN (''sleeping'', ''dormant'')
                     AND r.session_id = sp.session_id
@@ -1833,7 +1833,7 @@ BEGIN;
                         )
                         OR
                         (
-                            r.start_time = s.last_request_start_time
+                            r.start_time >= s.last_request_start_time
                             AND s.last_request_end_time <= sp.last_request_end_time
                         )
                     ) ';
@@ -3147,7 +3147,7 @@ BEGIN;
                         sp.login_time,
                         CASE
                             WHEN s.is_user_process = 1 THEN
-                                s.last_request_start_time
+                                COALESCE(r.start_time, s.last_request_start_time)
                             ELSE
                                 COALESCE
                                 (
