@@ -1823,7 +1823,10 @@ BEGIN;
                         )
                         OR
                         (
-                            r.start_time >= s.last_request_start_time
+                            (
+                                r.start_time = s.last_request_start_time
+                                OR s.last_request_start_time = s.login_time
+                            )
                             AND s.last_request_end_time <= sp.last_request_end_time
                         )
                     ) ';
