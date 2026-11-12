@@ -33,7 +33,7 @@ jobs:
       SA_PASSWORD: 'WhoIsActive!CI-2026'
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 

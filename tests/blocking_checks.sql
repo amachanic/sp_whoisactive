@@ -122,7 +122,10 @@ IF @bad <> N''
 DROP TABLE dbo.wia_ci_blocking_out;
 
 IF @problems <> ''
+BEGIN
+    PRINT 'FAIL: blocking scenario output is missing data:' + @problems;
     RAISERROR('Blocking scenario output is missing data:%s', 16, 1, @problems);
-
-PRINT 'PASS: blocking scenario output has blocker, blocked count, locks and lock wait';
+END;
+ELSE
+    PRINT 'PASS: blocking scenario output has blocker, blocked count, locks and lock wait';
 GO
