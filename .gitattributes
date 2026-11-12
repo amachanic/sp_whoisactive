@@ -1,2 +1,3 @@
 # linguist overrides
 *.sql linguist-language=TSQL
+*.sh text eol=lf

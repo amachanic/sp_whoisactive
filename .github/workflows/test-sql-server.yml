@@ -1,0 +1,79 @@
+name: Test on SQL Server
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.copy }} copy on SQL Server ${{ matrix.version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Root copy: SQL Server 2022 and later
+          - { version: 2022, copy: root, proc: sp_WhoIsActive.sql }
+          - { version: 2025, copy: root, proc: sp_WhoIsActive.sql }
+          # 2019 copy: SQL Server 2012 to 2019
+          - { version: 2017, copy: '2019', proc: 2019/sp_WhoIsActive.sql }
+          - { version: 2019, copy: '2019', proc: 2019/sp_WhoIsActive.sql }
+          # 2008 copy: regression check only. There is no container image for
+          # SQL Server 2005 or 2008, so this runs on the 2017 image.
+          - { version: 2017, copy: '2008', proc: 2008/sp_WhoIsActive.sql }
+    env:
+      # Throwaway password for a container that lives for this job only
+      SA_PASSWORD: 'WhoIsActive!CI-2026'
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Start SQL Server ${{ matrix.version }}
+        run: |
+          docker run -d --name sql \
+            -e ACCEPT_EULA=Y \
+            -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
+            mcr.microsoft.com/mssql/server:${{ matrix.version }}-latest
+
+      - name: Wait for SQL Server to accept logins
+        run: |
+          # The 2022 and 2025 images ship sqlcmd in /opt/mssql-tools18, the
+          # 2017 and 2019 images in /opt/mssql-tools. -C trusts the container's
+          # self-signed certificate (mssql-tools18 encrypts by default).
+          for i in $(seq 1 60); do
+            if docker exec sql bash -c '
+              for c in /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools/bin/sqlcmd; do
+                [ -x "$c" ] && exec "$c" -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -l 5 -Q "SELECT 1" > /dev/null
+              done
+              exit 1'; then
+              echo "SQL Server accepted a login after about $((i * 3)) seconds"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "SQL Server did not accept logins within 3 minutes"
+          docker logs sql 2>&1 | tail -n 50
+          exit 1
+
+      - name: Copy the proc and tests into the container
+        run: |
+          docker cp "${{ matrix.proc }}" sql:/tmp/sp_WhoIsActive.sql
+          docker cp tests sql:/tmp/tests
+
+      - name: Run the tests
+        run: |
+          docker exec -e SA_PASSWORD="$SA_PASSWORD" sql \
+            bash /tmp/tests/run-tests.sh /tmp/sp_WhoIsActive.sql
+
+      - name: Show the container log if the job failed
+        if: failure()
+        run: docker logs sql 2>&1 | tail -n 100
