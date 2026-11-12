@@ -55,6 +55,9 @@ ALTER PROC dbo.sp_WhoIsActive
     --Get associated query plans for running tasks, if available
     --If @get_plans = 1, gets the plan based on the request's statement offset
     --If @get_plans = 2, gets the entire plan based on the request's plan_handle
+    --Plan row counts show by default on SQL Server 2019 and later. Before 2019, they need trace flag 7412
+    --or standard profiling. Plan operator times (elapsed and CPU) show only when standard profiling is on
+    --in the session that runs the query, for example SET STATISTICS XML ON or SET STATISTICS PROFILE ON.
     @get_plans TINYINT = 0,
 
     --Get the associated outer ad hoc query or stored procedure call, if available
@@ -366,6 +369,7 @@ Non-Formatted:    [sql_text] [nvarchar](max) NULL
 Formatted/Non:    [query_plan] [xml] NULL
     (Requires @get_plans option)
     Shows the query plan for the request, if available.
+    Operator times need standard profiling in the session that runs the query. See @get_plans.
     If the plan is locked, a special timeout message will be sent, in the following format:
         <timeout_exceeded />
     If an error occurs, an error message will be sent, in the following format:
