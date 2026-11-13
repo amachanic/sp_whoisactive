@@ -57,9 +57,10 @@ ALTER PROC dbo.sp_WhoIsActive
     --Get associated query plans for running tasks, if available
     --If @get_plans = 1, gets the plan based on the request's statement offset
     --If @get_plans = 2, gets the entire plan based on the request's plan_handle
-    --Plan row counts show by default on SQL Server 2019 and later. Before 2019, they need trace flag 7412
-    --or standard profiling. Plan operator times (elapsed and CPU) show only when standard profiling is on
-    --in the session that runs the query, for example SET STATISTICS XML ON or SET STATISTICS PROFILE ON.
+    --Plan row counts and operator times need SQL Server 2016 SP1 or later. Row counts show by default on
+    --SQL Server 2019 and later. On 2016 SP1 and 2017, they need trace flag 7412 or standard profiling.
+    --Operator times (elapsed and CPU) show only when standard profiling is on in the session that runs
+    --the query. For example, that session can run SET STATISTICS XML ON or SET STATISTICS PROFILE ON.
     @get_plans TINYINT = 0,
 
     --Get the associated outer ad hoc query or stored procedure call, if available
